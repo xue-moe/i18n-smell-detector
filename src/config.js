@@ -56,15 +56,15 @@ function validateConfig(config) {
   }
 
   const candidate = /** @type {Record<string, unknown>} */ (config);
-  if (typeof candidate.baseLocale !== 'string' || !candidate.baseLocale) {
-    throw new Error('Config must include baseLocale');
+  if ('baseLocale' in candidate && (typeof candidate.baseLocale !== 'string' || !candidate.baseLocale)) {
+    throw new Error('Config baseLocale must be a non-empty string');
   }
 
-  if (!candidate.locales || typeof candidate.locales !== 'object' || Array.isArray(candidate.locales)) {
-    throw new Error('Config must include locales as an object');
+  if ('locales' in candidate && (!candidate.locales || typeof candidate.locales !== 'object' || Array.isArray(candidate.locales))) {
+    throw new Error('Config locales must be an object');
   }
 
-  for (const [locale, value] of Object.entries(candidate.locales)) {
+  for (const [locale, value] of Object.entries(candidate.locales || {})) {
     if (typeof value !== 'string' || !value) {
       throw new Error(`Config locales.${locale} must be a file path string`);
     }
@@ -74,6 +74,8 @@ function validateConfig(config) {
 /** @param {import('./types.js').DetectorConfig} config */
 function withDefaults(config) {
   return {
+    baseLocale: 'en',
+    locales: {},
     allowIdenticalKeys: [],
     allowIdenticalValues: [],
     ignoreSameLanguageFamily: true,

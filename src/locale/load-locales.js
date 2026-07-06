@@ -2,13 +2,28 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { flattenLocale } from './flatten-locale.js';
 
-async function readJson(filePath) {
-  const text = await readFile(filePath, 'utf8');
+function readErrorReason(error) {
+  if (error && typeof error === 'object' && 'code' in error) {
+    if (error.code === 'ENOENT') return 'file not found';
+    if (error.code === 'EACCES') return 'permission denied';
+  }
+
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function readJson(filePath, displayPath = filePath) {
+  let text;
+  try {
+    text = await readFile(filePath, 'utf8');
+  } catch (error) {
+    throw new Error(`Failed to read locale file: ${displayPath}\nReason: ${readErrorReason(error)}`);
+  }
+
   try {
     return JSON.parse(text);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to parse ${filePath}: ${message}`);
+    throw new Error(`Failed to parse locale file: ${displayPath}\nReason: ${message}`);
   }
 }
 
@@ -21,7 +36,7 @@ export async function loadFlattenedLocales(config, cwd) {
 
   for (const [locale, localePath] of Object.entries(config.locales || {})) {
     const absolutePath = path.isAbsolute(localePath) ? localePath : path.resolve(cwd, localePath);
-    locales[locale] = flattenLocale(await readJson(absolutePath));
+    locales[locale] = flattenLocale(await readJson(absolutePath, localePath));
   }
 
   if (!locales[config.baseLocale]) {

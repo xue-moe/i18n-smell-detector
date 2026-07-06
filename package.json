@@ -1,11 +1,19 @@
 {
   "name": "i18n-smell-detector",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Find locale values copied from the base locale.",
   "type": "module",
   "bin": {
     "i18n-smell-detector": "./bin/i18n-smell-detector.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xue-moe/i18n-smell-detector.git"
+  },
+  "bugs": {
+    "url": "https://github.com/xue-moe/i18n-smell-detector/issues"
+  },
+  "homepage": "https://github.com/xue-moe/i18n-smell-detector#readme",
   "files": [
     "bin",
     "src",

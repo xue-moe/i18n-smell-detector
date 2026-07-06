@@ -1,0 +1,30 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { loadConfig } from '../src/config.js';
+
+test('loadConfig applies documented defaults', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-config-'));
+  const configPath = path.join(tempDir, 'i18n-smell.config.mjs');
+
+  try {
+    await writeFile(configPath, 'export default {};');
+    const config = await loadConfig(configPath);
+
+    assert.deepEqual(config, {
+      baseLocale: 'en',
+      locales: {},
+      allowIdenticalKeys: [],
+      allowIdenticalValues: [],
+      ignoreSameLanguageFamily: true,
+      trimWhitespace: true,
+      ignoreCase: false,
+      includeIgnored: false,
+      failOn: 'high',
+    });
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});

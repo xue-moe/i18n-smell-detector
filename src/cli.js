@@ -6,7 +6,7 @@ import { renderReport } from './reporters/index.js';
 import { failRank, severityRank } from './severity.js';
 
 const HELP = `
-i18n-smell-detector v0.1
+i18n-smell-detector v0.1.1
 
 Usage:
   i18n-smell-detector check-identical [options]
