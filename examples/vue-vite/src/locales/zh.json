@@ -1,0 +1,22 @@
+{
+  "brand": {
+    "name": "ExampleApp"
+  },
+  "protocol": {
+    "http": "HTTP"
+  },
+  "common": {
+    "ok": "OK",
+    "id": "ID",
+    "cancel": "取消"
+  },
+  "home": {
+    "welcome": "Welcome back"
+  },
+  "form": {
+    "search": "搜索"
+  },
+  "settings": {
+    "profile": "Profile settings"
+  }
+}

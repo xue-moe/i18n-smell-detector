@@ -1,0 +1,22 @@
+{
+  "brand": {
+    "name": "ExampleApp"
+  },
+  "protocol": {
+    "http": "HTTP"
+  },
+  "common": {
+    "ok": "OK",
+    "id": "ID",
+    "cancel": "キャンセル"
+  },
+  "home": {
+    "welcome": "おかえりなさい"
+  },
+  "form": {
+    "search": "Search"
+  },
+  "settings": {
+    "profile": "プロフィール設定"
+  }
+}
