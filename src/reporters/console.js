@@ -1,3 +1,5 @@
+import { summarizeIssues } from './summary.js';
+
 function color(code, text) {
   if (process.env.NO_COLOR) return text;
   return `\u001b[${code}m${text}\u001b[0m`;
@@ -17,7 +19,7 @@ function preview(value) {
 
 export function renderConsoleReport(issues, options) {
   const visible = options.includeIgnored ? issues : issues.filter((issue) => issue.severity !== 'ignored');
-  const counts = countBySeverity(issues);
+  const counts = summarizeIssues(issues);
   const lines = [
     color('1', 'i18n-smell-detector: identical translations'),
     `high=${counts.high} medium=${counts.medium} low=${counts.low} ignored=${counts.ignored}`,
@@ -36,14 +38,4 @@ export function renderConsoleReport(issues, options) {
   }
 
   return lines.join('\n');
-}
-
-function countBySeverity(issues) {
-  return issues.reduce(
-    (acc, issue) => {
-      acc[issue.severity] += 1;
-      return acc;
-    },
-    { high: 0, medium: 0, low: 0, ignored: 0 }
-  );
 }

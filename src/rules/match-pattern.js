@@ -1,8 +1,5 @@
-function patternToRegExp(pattern) {
-  const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`^${escaped.replace(/\*/g, '.*')}$`);
-}
+import { matchesAnyRule } from './match-rule.js';
 
 export function matchesAnyPattern(value, patterns = []) {
-  return patterns.some((pattern) => patternToRegExp(pattern).test(value));
+  return matchesAnyRule(value, patterns, { wildcard: true });
 }

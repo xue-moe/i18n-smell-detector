@@ -67,7 +67,7 @@ export default {
 
   allowIdenticalKeys: [
     'brand.*',
-    'protocol.*',
+    /^protocol\./,
     'common.ok',
     'common.id'
   ],
@@ -75,12 +75,21 @@ export default {
   allowIdenticalValues: [
     'OK',
     'ID',
-    'HTTP',
+    /^HTTP\/\d(\.\d)?$/,
     'API',
     'GET',
     'POST'
   ],
 
+  placeholderPatterns: [
+    '\\{[^}]+\\}',
+    '\\{\\{[^}]+\\}\\}',
+    '%[sdif]',
+    '%\\([^)]+\\)[sdif]',
+    '\\$\\d+'
+  ],
+
+  ignoreCodeLike: true,
   ignoreSameLanguageFamily: true,
   trimWhitespace: true,
   ignoreCase: false,
@@ -95,8 +104,10 @@ export default {
 |---|---|---:|---|
 | `baseLocale` | `string` | `'en'` | Locale used as the comparison source. It must also be listed in `locales`. |
 | `locales` | `Record<string, string>` | `{}` | Map of locale codes to JSON locale file paths. Relative paths are resolved from the config file directory. |
-| `allowIdenticalKeys` | `string[]` | `[]` | Key patterns that are allowed to match the base locale. Supports `*` wildcards, for example `brand.*`. |
-| `allowIdenticalValues` | `string[]` | `[]` | Exact values that are allowed to match the base locale, for example `OK`, `API`, or `GET`. |
+| `allowIdenticalKeys` | `(string \| RegExp)[]` | `[]` | Key rules that are allowed to match the base locale. String rules support `*` wildcards, for example `brand.*`. `RegExp` rules are tested against the flattened key. |
+| `allowIdenticalValues` | `(string \| RegExp)[]` | `[]` | Value rules that are allowed to match the base locale. String rules are exact matches, for example `OK`, `API`, or `GET`. `RegExp` rules are tested against the full value. |
+| `placeholderPatterns` | `(string \| RegExp)[]` | `{...}` and `{{...}}` patterns | Placeholder patterns ignored when the whole value is only placeholders and whitespace. String entries must be valid regular expression sources. |
+| `ignoreCodeLike` | `boolean` | `true` | Ignore built-in code-like values such as paths, colors, acronyms, and identifiers. Set to `false` to report them. |
 | `failOn` | `'high' \| 'medium' \| 'low' \| 'none'` | `'high'` | Lowest severity that makes the CLI exit with code `1`. Use `none` to report without failing. |
 | `trimWhitespace` | `boolean` | `true` | Trim leading and trailing whitespace before comparing values. |
 | `ignoreCase` | `boolean` | `false` | Compare values case-insensitively when set to `true`. |
@@ -124,10 +135,16 @@ MEDIUM ja.form.search
 
 ## JSON output
 
-`--format json` prints an object with an `issues` array:
+`--format json` prints an object with a `summary` and an `issues` array:
 
 ```json
 {
+  "summary": {
+    "high": 1,
+    "medium": 0,
+    "low": 0,
+    "ignored": 16
+  },
   "issues": [
     {
       "key": "home.welcome",
@@ -142,6 +159,8 @@ MEDIUM ja.form.search
 ```
 
 Fields:
+
+Summary counts include all findings, including ignored findings that may be omitted from the visible `issues` array.
 
 | Field | Type | Description |
 |---|---|---|
@@ -169,8 +188,8 @@ Ignored issues are omitted by default. Pass `--include-ignored` to include them 
 | Key matches `allowIdenticalKeys` | ignored |
 | Value matches `allowIdenticalValues` | ignored |
 | Same language family, such as `en` and `en-GB` | ignored |
-| URL, path, color, or code-like value | ignored |
 | Placeholder-only value, such as `{count}` | ignored |
+| URL, path, color, or code-like value | ignored by default |
 | Short common label | low |
 | Single English word | medium |
 | English phrase | high |
@@ -189,13 +208,19 @@ export default {
   allowIdenticalKeys: [
     'brand.*',
     'legal.name',
-    'protocol.*'
+    /^protocol\./
   ],
   allowIdenticalValues: [
     'OK',
     'ID',
     'API',
-    'HTTPS'
+    /^HTTP\/\d(\.\d)?$/
+  ],
+  placeholderPatterns: [
+    '\\{[^}]+\\}',
+    '\\{\\{[^}]+\\}\\}',
+    '%[sdif]',
+    '%\\([^)]+\\)[sdif]'
   ],
   failOn: 'high'
 };
@@ -204,7 +229,10 @@ export default {
 Useful tuning patterns:
 
 - Use `allowIdenticalKeys` for groups of expected identical values, such as names, legal labels, and protocol keys.
-- Use `allowIdenticalValues` for exact shared labels, acronyms, method names, and technical terms.
+- Use string `allowIdenticalKeys` entries for exact or wildcard key matches, and `RegExp` entries for broader key families.
+- Use string `allowIdenticalValues` entries for exact shared labels, and `RegExp` entries for structured values such as `HTTP/2`.
+- Add `placeholderPatterns` for framework-specific placeholders such as `%s`, `%(name)s`, or `$1`. Mixed content such as `Total: {count}` is still reported.
+- Set `ignoreCodeLike: false` if paths, colors, acronyms, or identifiers should be shown as findings.
 - Set `ignoreSameLanguageFamily: false` if you want to check regional variants such as `en-GB`, `en-AU`, or `pt-BR`.
 - Set `failOn: 'none'` while tuning a new project, then raise it to `high` or `medium` once the allowlist is stable.
 - Pass `--include-ignored` when reviewing why a value was ignored.

@@ -12,6 +12,11 @@ const CONFIG_FILES = [
   'i18n-smell.config.json',
 ];
 
+const DEFAULT_PLACEHOLDER_PATTERNS = [
+  String.raw`\{\{[^}]+\}\}`,
+  String.raw`\{[^}]+\}`,
+];
+
 async function exists(filePath) {
   try {
     await access(filePath);
@@ -69,6 +74,13 @@ function validateConfig(config) {
       throw new Error(`Config locales.${locale} must be a file path string`);
     }
   }
+
+  validateRuleList(candidate.allowIdenticalKeys, 'allowIdenticalKeys');
+  validateRuleList(candidate.allowIdenticalValues, 'allowIdenticalValues');
+
+  if ('placeholderPatterns' in candidate && !Array.isArray(candidate.placeholderPatterns)) {
+    throw new Error('Config placeholderPatterns must be an array of strings or RegExp objects');
+  }
 }
 
 /** @param {import('./types.js').DetectorConfig} config */
@@ -84,5 +96,39 @@ function withDefaults(config) {
     includeIgnored: false,
     failOn: 'high',
     ...config,
+    placeholderPatterns: normalizePlaceholderPatterns(config.placeholderPatterns || DEFAULT_PLACEHOLDER_PATTERNS),
+    ignoreCodeLike: config.ignoreCodeLike ?? true,
   };
+}
+
+function validateRuleList(rules, name) {
+  if (rules === undefined) return;
+  if (!Array.isArray(rules)) throw new Error(`Config ${name} must be an array`);
+
+  for (const rule of rules) {
+    if (typeof rule !== 'string' && !(rule instanceof RegExp)) {
+      throw new Error(`Config ${name} entries must be strings or RegExp objects`);
+    }
+  }
+}
+
+function normalizePlaceholderPatterns(patterns) {
+  return patterns.map((pattern) => {
+    if (pattern instanceof RegExp) return withGlobalFlag(pattern);
+
+    if (typeof pattern !== 'string') {
+      throw new Error('Config placeholderPatterns entries must be strings or RegExp objects');
+    }
+
+    try {
+      return new RegExp(pattern, 'g');
+    } catch (error) {
+      throw new Error(`Invalid placeholder pattern "${pattern}": ${error.message}`);
+    }
+  });
+}
+
+function withGlobalFlag(pattern) {
+  const flags = pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`;
+  return new RegExp(pattern.source, flags);
 }

@@ -1,10 +1,18 @@
+import { summarizeIssues } from './summary.js';
+
 function escapeCell(value) {
   return String(value).replace(/\|/g, '\\|').replace(/\n/g, '<br>');
 }
 
 export function renderMarkdownReport(issues, options) {
   const visible = options.includeIgnored ? issues : issues.filter((issue) => issue.severity !== 'ignored');
-  const lines = ['# Identical translations', ''];
+  const summary = summarizeIssues(issues);
+  const lines = [
+    '# Identical translations',
+    '',
+    `high=${summary.high} medium=${summary.medium} low=${summary.low} ignored=${summary.ignored}`,
+    '',
+  ];
 
   if (visible.length === 0) {
     lines.push('No copied base-locale values found.');

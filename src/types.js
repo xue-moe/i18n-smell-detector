@@ -5,8 +5,10 @@
  * @typedef {Object} DetectorConfig
  * @property {string} baseLocale
  * @property {Record<string, string>} locales
- * @property {string[]=} allowIdenticalKeys
- * @property {string[]=} allowIdenticalValues
+ * @property {(string | RegExp)[]=} allowIdenticalKeys
+ * @property {(string | RegExp)[]=} allowIdenticalValues
+ * @property {(string | RegExp)[]=} placeholderPatterns
+ * @property {boolean=} ignoreCodeLike
  * @property {boolean=} ignoreSameLanguageFamily
  * @property {boolean=} trimWhitespace
  * @property {boolean=} ignoreCase

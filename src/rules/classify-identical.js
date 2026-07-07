@@ -1,4 +1,4 @@
-import { matchesAnyPattern } from './match-pattern.js';
+import { matchesAnyRule } from './match-rule.js';
 
 function isBlank(value) {
   return value.trim().length === 0;
@@ -18,12 +18,17 @@ function isCodeLike(value) {
     || (/^[a-z0-9_.:-]+$/.test(text) && !/\s/.test(text) && !/[A-Z]/.test(text));
 }
 
-function isPlaceholderOnly(value) {
-  const text = value
-    .replace(/\{\{\s*[^}]+\s*\}\}/g, '')
-    .replace(/\{\s*[^}]+\s*\}/g, '')
-    .replace(/[\s\p{P}\p{S}]/gu, '');
-  return text.length === 0;
+function isPlaceholderOnly(value, patterns) {
+  let text = value.trim();
+
+  const orderedPatterns = [...(patterns || [])].sort((a, b) => b.source.length - a.source.length);
+
+  for (const pattern of orderedPatterns) {
+    pattern.lastIndex = 0;
+    text = text.replace(pattern, '');
+  }
+
+  return text.trim() === '';
 }
 
 function getLatinWords(value) {
@@ -49,22 +54,22 @@ function isShortCommonLabel(value) {
  * @returns {{ severity: import('../types.js').Severity, reason: string }}
  */
 export function classifyIdentical({ key, value, baseLocale, targetLocale, config }) {
+  if (matchesAnyRule(key, config.allowIdenticalKeys || [], { wildcard: true })) {
+    return { severity: 'ignored', reason: 'allowed key' };
+  }
+
+  if (matchesAnyRule(value, config.allowIdenticalValues || [])) {
+    return { severity: 'ignored', reason: 'allowed value' };
+  }
+
   if ((config.ignoreSameLanguageFamily ?? true) && languageFamily(baseLocale) === languageFamily(targetLocale)) {
     return { severity: 'ignored', reason: 'same language family' };
   }
 
-  if (matchesAnyPattern(key, config.allowIdenticalKeys || [])) {
-    return { severity: 'ignored', reason: 'allowed key' };
-  }
-
-  if ((config.allowIdenticalValues || []).includes(value)) {
-    return { severity: 'ignored', reason: 'allowed value' };
-  }
-
   if (isBlank(value)) return { severity: 'ignored', reason: 'blank value' };
+  if (isPlaceholderOnly(value, config.placeholderPatterns || [])) return { severity: 'ignored', reason: 'placeholder only' };
   if (isExternalReference(value)) return { severity: 'ignored', reason: 'external reference' };
-  if (isPlaceholderOnly(value)) return { severity: 'ignored', reason: 'placeholder only' };
-  if (isCodeLike(value)) return { severity: 'ignored', reason: 'code-like value' };
+  if ((config.ignoreCodeLike ?? true) && isCodeLike(value)) return { severity: 'ignored', reason: 'code-like value' };
   if (isShortCommonLabel(value)) return { severity: 'low', reason: 'short common label' };
 
   const words = getLatinWords(value);
