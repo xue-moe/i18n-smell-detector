@@ -6,11 +6,12 @@
 
 Find locale values copied from the base locale.
 
-`i18n-smell-detector` checks localization files for keys whose translated value is identical to the base locale. This can help catch entries that were copied as placeholders and never translated.
+`i18n-smell-detector` checks localization files for keys whose translated value is identical to the base locale. It can also scan Vue templates for hardcoded user-visible strings.
 
 ## Features
 
 - Detect values that are identical to the base locale
+- Detect hardcoded strings in Vue template text and selected attributes
 - Ignore expected matches by key or value
 - Classify findings as `high`, `medium`, `low`, or `ignored`
 - Output results as console text, JSON, or Markdown
@@ -28,6 +29,7 @@ Run the check:
 
 ```bash
 npx i18n-smell-detector check-identical --config i18n-smell.config.mjs
+npx i18n-smell-detector check-hardcoded --config i18n-smell.config.mjs
 ```
 
 Output formats:
@@ -36,6 +38,7 @@ Output formats:
 npx i18n-smell-detector check-identical --format console
 npx i18n-smell-detector check-identical --format json
 npx i18n-smell-detector check-identical --format markdown
+npx i18n-smell-detector check-hardcoded --format json
 ```
 
 ## CI usage
@@ -59,6 +62,10 @@ Create `i18n-smell.config.mjs`:
 ```js
 export default {
   baseLocale: 'en',
+  source: [
+    'src/**/*.vue'
+  ],
+
   locales: {
     en: './src/locales/en.json',
     zh: './src/locales/zh.json',
@@ -90,6 +97,22 @@ export default {
   ],
 
   ignoreCodeLike: true,
+  hardcoded: {
+    vueAttributes: [
+      'placeholder',
+      'title',
+      'alt',
+      'aria-label',
+      'aria-description'
+    ],
+    ignoreValues: [
+      'OK',
+      'ID'
+    ],
+    ignorePatterns: [
+      '^v\\d+$'
+    ]
+  },
   ignoreSameLanguageFamily: true,
   trimWhitespace: true,
   ignoreCase: false,
@@ -103,11 +126,15 @@ export default {
 | Option | Type | Default | Description |
 |---|---|---:|---|
 | `baseLocale` | `string` | `'en'` | Locale used as the comparison source. It must also be listed in `locales`. |
+| `source` | `string[]` | `['src/**/*.vue']` | Source globs used by `check-hardcoded`. `node_modules` is ignored. |
 | `locales` | `Record<string, string>` | `{}` | Map of locale codes to JSON locale file paths. Relative paths are resolved from the config file directory. |
 | `allowIdenticalKeys` | `(string \| RegExp)[]` | `[]` | Key rules that are allowed to match the base locale. String rules support `*` wildcards, for example `brand.*`. `RegExp` rules are tested against the flattened key. |
 | `allowIdenticalValues` | `(string \| RegExp)[]` | `[]` | Value rules that are allowed to match the base locale. String rules are exact matches, for example `OK`, `API`, or `GET`. `RegExp` rules are tested against the full value. |
 | `placeholderPatterns` | `(string \| RegExp)[]` | `{...}` and `{{...}}` patterns | Placeholder patterns ignored when the whole value is only placeholders and whitespace. String entries must be valid regular expression sources. |
 | `ignoreCodeLike` | `boolean` | `true` | Ignore built-in code-like values such as paths, colors, acronyms, and identifiers. Set to `false` to report them. |
+| `hardcoded.vueAttributes` | `string[]` | `placeholder`, `title`, `alt`, `aria-label`, `aria-description` | Static Vue attributes checked by `check-hardcoded`. Dynamic bindings such as `:placeholder` are ignored. |
+| `hardcoded.ignoreValues` | `(string \| RegExp)[]` | `[]` | Exact values or regular expressions ignored by `check-hardcoded`. |
+| `hardcoded.ignorePatterns` | `(string \| RegExp)[]` | `[]` | Regular expression patterns ignored by `check-hardcoded`. String entries are compiled as regular expressions. |
 | `failOn` | `'high' \| 'medium' \| 'low' \| 'none'` | `'high'` | Lowest severity that makes the CLI exit with code `1`. Use `none` to report without failing. |
 | `trimWhitespace` | `boolean` | `true` | Trim leading and trailing whitespace before comparing values. |
 | `ignoreCase` | `boolean` | `false` | Compare values case-insensitively when set to `true`. |
@@ -173,6 +200,47 @@ Summary counts include all findings, including ignored findings that may be omit
 
 Ignored issues are omitted by default. Pass `--include-ignored` to include them in JSON, console, or Markdown output.
 
+## Hardcoded string output
+
+`check-hardcoded` reports Vue template text and static user-visible attributes:
+
+```txt
+i18n-smell-detector: hardcoded strings
+high=1 medium=1 low=0 ignored=4
+
+HIGH src/components/UserPanel.vue:12:15
+  value: "Profile settings"
+  reason: static template text
+
+MEDIUM src/components/SearchInput.vue:8:23
+  value: "Search"
+  reason: static placeholder attribute
+```
+
+JSON output includes source locations:
+
+```json
+{
+  "summary": {
+    "high": 1,
+    "medium": 1,
+    "low": 0,
+    "ignored": 4
+  },
+  "issues": [
+    {
+      "file": "src/components/UserPanel.vue",
+      "line": 12,
+      "column": 15,
+      "value": "Profile settings",
+      "severity": "high",
+      "reason": "static template text",
+      "kind": "vue-text"
+    }
+  ]
+}
+```
+
 ## Exit codes
 
 | Code | Meaning |
@@ -193,6 +261,8 @@ Ignored issues are omitted by default. Pass `--include-ignored` to include them 
 | Short common label | low |
 | Single English word | medium |
 | English phrase | high |
+
+For `check-hardcoded`, sentence-like template text and static attributes are `high`, single words are `medium`, short common labels are `low`, and configured or non-user-facing values are `ignored`.
 
 ## False positive tuning
 
@@ -236,6 +306,13 @@ Useful tuning patterns:
 - Set `ignoreSameLanguageFamily: false` if you want to check regional variants such as `en-GB`, `en-AU`, or `pt-BR`.
 - Set `failOn: 'none'` while tuning a new project, then raise it to `high` or `medium` once the allowlist is stable.
 - Pass `--include-ignored` when reviewing why a value was ignored.
+- Use `source` to choose Vue files for `check-hardcoded`.
+- Tune `hardcoded.vueAttributes` if your project uses additional static attributes for user-visible text.
+- Use `hardcoded.ignoreValues` and `hardcoded.ignorePatterns` for intentional literals such as `OK`, version labels, or product codes.
+
+## Limitations
+
+`check-hardcoded` currently scans Vue templates only. JavaScript, TypeScript, and JSX string detection are not included yet.
 
 ## Notes
 

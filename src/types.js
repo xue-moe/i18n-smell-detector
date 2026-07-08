@@ -8,6 +8,8 @@
  * @property {(string | RegExp)[]=} allowIdenticalKeys
  * @property {(string | RegExp)[]=} allowIdenticalValues
  * @property {(string | RegExp)[]=} placeholderPatterns
+ * @property {string[]=} source
+ * @property {{vueAttributes: string[], ignoreValues: (string | RegExp)[], ignorePatterns: RegExp[]}=} hardcoded
  * @property {boolean=} ignoreCodeLike
  * @property {boolean=} ignoreSameLanguageFamily
  * @property {boolean=} trimWhitespace
@@ -22,6 +24,15 @@
  * @property {string} value
  * @property {Severity} severity
  * @property {string} reason
+ *
+ * @typedef {Object} HardcodedIssue
+ * @property {string} file
+ * @property {number} line
+ * @property {number} column
+ * @property {string} value
+ * @property {Severity} severity
+ * @property {string} reason
+ * @property {string} kind
  */
 
 export {};

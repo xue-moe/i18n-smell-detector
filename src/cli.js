@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { checkHardcodedStrings } from './check-hardcoded.js';
 import { checkIdenticalTranslations } from './check-identical.js';
 import { loadConfig, resolveConfigPath } from './config.js';
 import { loadFlattenedLocales } from './locale/load-locales.js';
@@ -6,10 +7,11 @@ import { renderReport } from './reporters/index.js';
 import { failRank, severityRank } from './severity.js';
 
 const HELP = `
-i18n-smell-detector v0.1.1
+i18n-smell-detector
 
 Usage:
   i18n-smell-detector check-identical [options]
+  i18n-smell-detector check-hardcoded [options]
   i18n-smell-detector check [options]
 
 Options:
@@ -21,6 +23,7 @@ Options:
 
 Example:
   i18n-smell-detector check-identical -c i18n-smell.config.mjs --format markdown
+  i18n-smell-detector check-hardcoded -c i18n-smell.config.mjs --format json
 `;
 
 function parseArgs(argv) {
@@ -64,7 +67,7 @@ export async function runCli(argv) {
     return;
   }
 
-  if (!['check-identical', 'check'].includes(options.command)) {
+  if (!['check-identical', 'check-hardcoded', 'check'].includes(options.command)) {
     throw new Error(`Unknown command: ${options.command}\n${HELP}`);
   }
 
@@ -76,12 +79,18 @@ export async function runCli(argv) {
     includeIgnored: options.includeIgnored || config.includeIgnored || false,
   };
 
-  const locales = await loadFlattenedLocales(effectiveConfig, path.dirname(configPath));
-  const issues = checkIdenticalTranslations(locales, effectiveConfig);
+  const configDir = path.dirname(configPath);
+  const isHardcoded = options.command === 'check-hardcoded';
+  const issues = isHardcoded
+    ? await checkHardcodedStrings(effectiveConfig, configDir)
+    : checkIdenticalTranslations(await loadFlattenedLocales(effectiveConfig, configDir), effectiveConfig);
 
   console.log(renderReport(issues, {
     format: options.format,
     includeIgnored: effectiveConfig.includeIgnored || false,
+    title: isHardcoded ? 'hardcoded strings' : 'identical translations',
+    heading: isHardcoded ? 'Hardcoded strings' : 'Identical translations',
+    emptyMessage: isHardcoded ? 'No hardcoded strings found.' : 'No copied base-locale values found.',
   }));
 
   const visible = effectiveConfig.includeIgnored ? issues : issues.filter((issue) => issue.severity !== 'ignored');

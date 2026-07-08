@@ -1,5 +1,8 @@
 export default {
   baseLocale: 'en',
+  source: [
+    './src/**/*.vue'
+  ],
   locales: {
     en: './src/locales/en.json',
     zh: './src/locales/zh.json',
@@ -20,5 +23,14 @@ export default {
     'GET',
     'POST'
   ],
+  hardcoded: {
+    ignoreValues: [
+      'OK',
+      'ID'
+    ],
+    ignorePatterns: [
+      '^v\\d+$'
+    ]
+  },
   failOn: 'high'
 };

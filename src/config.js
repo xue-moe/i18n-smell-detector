@@ -17,6 +17,14 @@ const DEFAULT_PLACEHOLDER_PATTERNS = [
   String.raw`\{[^}]+\}`,
 ];
 
+const DEFAULT_HARDCODED_ATTRIBUTES = [
+  'placeholder',
+  'title',
+  'alt',
+  'aria-label',
+  'aria-description',
+];
+
 async function exists(filePath) {
   try {
     await access(filePath);
@@ -81,6 +89,21 @@ function validateConfig(config) {
   if ('placeholderPatterns' in candidate && !Array.isArray(candidate.placeholderPatterns)) {
     throw new Error('Config placeholderPatterns must be an array of strings or RegExp objects');
   }
+
+  if ('source' in candidate && !isStringArray(candidate.source)) {
+    throw new Error('Config source must be an array of glob strings');
+  }
+
+  if ('hardcoded' in candidate && (!candidate.hardcoded || typeof candidate.hardcoded !== 'object' || Array.isArray(candidate.hardcoded))) {
+    throw new Error('Config hardcoded must be an object');
+  }
+
+  const hardcoded = /** @type {Record<string, unknown>} */ (candidate.hardcoded || {});
+  if ('vueAttributes' in hardcoded && !isStringArray(hardcoded.vueAttributes)) {
+    throw new Error('Config hardcoded.vueAttributes must be an array of strings');
+  }
+  validateRuleList(hardcoded.ignoreValues, 'hardcoded.ignoreValues');
+  validateRuleList(hardcoded.ignorePatterns, 'hardcoded.ignorePatterns');
 }
 
 /** @param {import('./types.js').DetectorConfig} config */
@@ -96,9 +119,15 @@ function withDefaults(config) {
     includeIgnored: false,
     failOn: 'high',
     ...config,
+    source: config.source || ['src/**/*.vue'],
+    hardcoded: normalizeHardcodedConfig(config.hardcoded || {}),
     placeholderPatterns: normalizePlaceholderPatterns(config.placeholderPatterns || DEFAULT_PLACEHOLDER_PATTERNS),
     ignoreCodeLike: config.ignoreCodeLike ?? true,
   };
+}
+
+function isStringArray(value) {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string' && item.length > 0);
 }
 
 function validateRuleList(rules, name) {
@@ -124,6 +153,29 @@ function normalizePlaceholderPatterns(patterns) {
       return new RegExp(pattern, 'g');
     } catch (error) {
       throw new Error(`Invalid placeholder pattern "${pattern}": ${error.message}`);
+    }
+  });
+}
+
+function normalizeHardcodedConfig(config) {
+  return {
+    vueAttributes: config.vueAttributes || DEFAULT_HARDCODED_ATTRIBUTES,
+    ignoreValues: config.ignoreValues || [],
+    ignorePatterns: normalizeRegexRules(config.ignorePatterns || [], 'hardcoded.ignorePatterns'),
+  };
+}
+
+function normalizeRegexRules(rules, name) {
+  return rules.map((rule) => {
+    if (rule instanceof RegExp) return rule;
+    if (typeof rule !== 'string') {
+      throw new Error(`Config ${name} entries must be strings or RegExp objects`);
+    }
+
+    try {
+      return new RegExp(rule);
+    } catch (error) {
+      throw new Error(`Invalid ${name} pattern "${rule}": ${error.message}`);
     }
   });
 }

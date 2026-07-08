@@ -17,6 +17,7 @@ test('loadConfig applies documented defaults', async () => {
       {
         ...config,
         placeholderPatterns: undefined,
+        hardcoded: undefined,
       },
       {
         baseLocale: 'en',
@@ -24,6 +25,8 @@ test('loadConfig applies documented defaults', async () => {
         allowIdenticalKeys: [],
         allowIdenticalValues: [],
         placeholderPatterns: undefined,
+        source: ['src/**/*.vue'],
+        hardcoded: undefined,
         ignoreCodeLike: true,
         ignoreSameLanguageFamily: true,
         trimWhitespace: true,

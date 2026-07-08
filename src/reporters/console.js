@@ -21,21 +21,26 @@ export function renderConsoleReport(issues, options) {
   const visible = options.includeIgnored ? issues : issues.filter((issue) => issue.severity !== 'ignored');
   const counts = summarizeIssues(issues);
   const lines = [
-    color('1', 'i18n-smell-detector: identical translations'),
+    color('1', `i18n-smell-detector: ${options.title || 'identical translations'}`),
     `high=${counts.high} medium=${counts.medium} low=${counts.low} ignored=${counts.ignored}`,
   ];
 
   if (visible.length === 0) {
-    lines.push(color('32', 'No copied base-locale values found.'));
+    lines.push(color('32', options.emptyMessage || 'No copied base-locale values found.'));
     return lines.join('\n');
   }
 
   lines.push('');
   for (const issue of visible) {
-    lines.push(`${label(issue.severity)} ${issue.targetLocale}.${issue.key}`);
+    lines.push(`${label(issue.severity)} ${formatLocation(issue)}`);
     lines.push(`  value: "${preview(issue.value)}"`);
     lines.push(`  reason: ${issue.reason}`);
   }
 
   return lines.join('\n');
+}
+
+function formatLocation(issue) {
+  if (issue.file) return `${issue.file}:${issue.line}:${issue.column}`;
+  return `${issue.targetLocale}.${issue.key}`;
 }

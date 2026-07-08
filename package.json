@@ -1,6 +1,6 @@
 {
   "name": "i18n-smell-detector",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Find locale values copied from the base locale.",
   "type": "module",
   "bin": {
@@ -21,7 +21,9 @@
     "LICENSE"
   ],
   "scripts": {
-    "check": "node ./bin/i18n-smell-detector.js check-identical --config ./examples/vue-vite/i18n-smell.config.mjs --fail-on none",
+    "check": "npm run check:identical && npm run check:hardcoded",
+    "check:identical": "node ./bin/i18n-smell-detector.js check-identical --config ./examples/vue-vite/i18n-smell.config.mjs --fail-on none",
+    "check:hardcoded": "node ./bin/i18n-smell-detector.js check-hardcoded --config ./examples/vue-vite/i18n-smell.config.mjs --fail-on none",
     "test": "node --test"
   },
   "keywords": [
@@ -34,5 +36,10 @@
   "license": "MIT",
   "engines": {
     "node": ">=18.17"
+  },
+  "dependencies": {
+    "@vue/compiler-dom": "^3.5.39",
+    "@vue/compiler-sfc": "^3.5.39",
+    "fast-glob": "^3.3.3"
   }
 }
