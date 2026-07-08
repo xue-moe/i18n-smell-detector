@@ -1,0 +1,39 @@
+name: Feature request
+description: Suggest a new check, option, or workflow.
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Describe the behavior you want.
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples
+      description: Include small locale/source snippets if useful.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - check-identical
+        - check-hardcoded
+        - reporters
+        - baseline
+        - config
+        - CI/release
+        - documentation
+        - other
+    validations:
+      required: true

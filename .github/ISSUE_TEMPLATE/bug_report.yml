@@ -1,0 +1,56 @@
+name: Bug report
+description: Report incorrect behavior or a crash.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Share the installed package version from package.json, npm, or your lockfile.
+      placeholder: "0.4.0"
+  - type: textarea
+    id: command
+    attributes:
+      label: Command
+      description: Which command did you run?
+      render: bash
+      placeholder: "npx i18n-smell-detector check --config i18n-smell.config.mjs"
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant config
+      render: js
+      description: Paste the smallest config snippet that reproduces the issue.
+  - type: textarea
+    id: input
+    attributes:
+      label: Minimal input
+      description: Share a small locale file or Vue template snippet.
+      render: json
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      description: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Node.js version, OS, package manager, and framework details.
+      placeholder: "Node 22, npm 10, macOS, Vue 3"

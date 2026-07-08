@@ -4,9 +4,11 @@
 [![CI](https://github.com/xue-moe/i18n-smell-detector/actions/workflows/ci.yml/badge.svg)](https://github.com/xue-moe/i18n-smell-detector/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-Find locale values copied from the base locale.
+Find localization issues that key coverage checks miss.
 
 `i18n-smell-detector` checks localization files for keys whose translated value is identical to the base locale. It can also scan Vue templates for hardcoded user-visible strings.
+
+Current scope: `check-hardcoded` scans Vue templates only; JavaScript, TypeScript, and JSX strings are not scanned yet. Text classification is rule-based and conservative, so projects with many proper nouns, product codes, or non-English copy should start with `--fail-on none` and tune allowlists before enforcing CI.
 
 ## Features
 
@@ -70,7 +72,7 @@ For a new project, it is often easier to start in reporting mode while tuning al
 npx i18n-smell-detector check --config i18n-smell.config.mjs --fail-on none
 ```
 
-### GitHub Actions example
+### CI report artifact
 
 Add a workflow such as `.github/workflows/i18n-smell.yml`:
 
@@ -107,15 +109,6 @@ jobs:
         with:
           name: i18n-smell-report
           path: reports/i18n-smell.md
-```
-
-For this repository, the local smoke commands are:
-
-```bash
-npm test
-npm run check
-npm run example:basic
-node bin/i18n-smell-detector.js --help
 ```
 
 ## Configuration
@@ -314,7 +307,7 @@ JSON output includes source locations:
 }
 ```
 
-## Running All Checks
+## Running all checks
 
 Use `check` to run every enabled check in one command:
 
@@ -355,7 +348,7 @@ Combined JSON output groups counts by check:
 }
 ```
 
-## Writing Reports
+## Writing reports
 
 Use `--output` to write the full report to a file. The CLI prints a short summary to stdout after writing.
 
@@ -366,7 +359,7 @@ npx i18n-smell-detector check --format json --output reports/i18n-report.json
 
 Markdown output for `check` includes a summary table and one section per check, which makes it suitable for CI artifacts.
 
-## Gradual Adoption
+## Gradual adoption
 
 Use a baseline to ignore existing findings while still failing CI for new ones:
 
@@ -448,7 +441,7 @@ Useful tuning patterns:
 
 ## Limitations
 
-`check-hardcoded` currently scans Vue templates only. JavaScript, TypeScript, and JSX string detection are not included yet.
+`check-hardcoded` currently scans Vue templates only. JavaScript, TypeScript, and JSX string detection are not included yet. Classification uses heuristic rules rather than full language detection.
 
 ## Notes
 

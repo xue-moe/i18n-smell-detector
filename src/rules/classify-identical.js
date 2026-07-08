@@ -32,7 +32,7 @@ function isPlaceholderOnly(value, patterns) {
 }
 
 function getLatinWords(value) {
-  return value.match(/[A-Za-z][A-Za-z']*/g) || [];
+  return value.match(/[\p{L}\p{M}][\p{L}\p{M}']*/gu) || [];
 }
 
 function languageFamily(locale) {

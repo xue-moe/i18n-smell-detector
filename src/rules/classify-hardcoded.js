@@ -20,7 +20,7 @@ function isNonUserFacing(value) {
 }
 
 function latinWords(value) {
-  return value.match(/[A-Za-z][A-Za-z']*/g) || [];
+  return value.match(/[\p{L}\p{M}][\p{L}\p{M}']*/gu) || [];
 }
 
 function isShortCommonLabel(value) {

@@ -40,3 +40,13 @@ test('scanVueTemplate skips whitespace-only text nodes', () => {
 
   assert.deepEqual(issues.map((issue) => issue.value), ['Search']);
 });
+
+test('scanVueTemplate recognizes Unicode letter text', () => {
+  const issues = scanVueTemplate(
+    '<section><p>Résumé naïve</p><button>保存</button></section>',
+    { file: 'Component.vue', config }
+  ).filter((issue) => issue.severity !== 'ignored');
+
+  assert.equal(issues.find((issue) => issue.value === 'Résumé naïve')?.severity, 'high');
+  assert.equal(issues.find((issue) => issue.value === '保存')?.severity, 'low');
+});

@@ -41,3 +41,20 @@ test('checkIdenticalTranslations classifies copied English text', () => {
   assert.equal(issues.find((issue) => issue.key === 'common.ok')?.severity, 'ignored');
   assert.equal(issues.find((issue) => issue.targetLocale === 'en-GB')?.severity, 'ignored');
 });
+
+test('checkIdenticalTranslations recognizes Unicode letter words', () => {
+  const issues = checkIdenticalTranslations(
+    {
+      en: {
+        'profile.bio': 'Résumé naïve',
+      },
+      zh: {
+        'profile.bio': 'Résumé naïve',
+      },
+    },
+    config
+  );
+
+  assert.equal(issues[0].severity, 'high');
+  assert.equal(issues[0].reason, 'copied English phrase');
+});

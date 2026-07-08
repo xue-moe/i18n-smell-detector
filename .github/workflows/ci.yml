@@ -26,3 +26,5 @@ jobs:
       - run: npm run example:basic
       - run: node bin/i18n-smell-detector.js --help
       - run: npm pack --dry-run
+      - run: npm run audit
+      - run: npm run check:package
