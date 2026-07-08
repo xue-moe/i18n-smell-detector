@@ -22,5 +22,7 @@ jobs:
 
       - run: npm install
       - run: npm test
+      - run: npm run check
+      - run: npm run example:basic
       - run: node bin/i18n-smell-detector.js --help
-      - run: node bin/i18n-smell-detector.js check --config examples/vue-vite/i18n-smell.config.mjs --fail-on none
+      - run: npm pack --dry-run
