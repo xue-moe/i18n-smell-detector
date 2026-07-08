@@ -1,3 +1,10 @@
+## [0.4.1](https://github.com/xue-moe/i18n-smell-detector/compare/v0.4.0...v0.4.1) (2026-07-08)
+
+
+### Bug Fixes
+
+* **rules:** detect unicode letter words ([f873b3c](https://github.com/xue-moe/i18n-smell-detector/commit/f873b3c80a45875d026ff3ff8e3b86d9500ea393))
+
 # Changelog
 
 ## v0.4.0

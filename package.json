@@ -1,6 +1,6 @@
 {
   "name": "i18n-smell-detector",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Find locale values copied from the base locale.",
   "type": "module",
   "bin": {
