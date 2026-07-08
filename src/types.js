@@ -10,6 +10,10 @@
  * @property {(string | RegExp)[]=} placeholderPatterns
  * @property {string[]=} source
  * @property {{vueAttributes: string[], ignoreValues: (string | RegExp)[], ignorePatterns: RegExp[]}=} hardcoded
+ * @property {{identical: boolean, hardcoded: boolean}=} checks
+ * @property {ReportFormat=} format
+ * @property {string=} output
+ * @property {string=} baseline
  * @property {boolean=} ignoreCodeLike
  * @property {boolean=} ignoreSameLanguageFamily
  * @property {boolean=} trimWhitespace

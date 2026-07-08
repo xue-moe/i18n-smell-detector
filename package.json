@@ -21,9 +21,10 @@
     "LICENSE"
   ],
   "scripts": {
-    "check": "npm run check:identical && npm run check:hardcoded",
+    "check": "node ./bin/i18n-smell-detector.js check --config ./examples/vue-vite/i18n-smell.config.mjs --fail-on none",
     "check:identical": "node ./bin/i18n-smell-detector.js check-identical --config ./examples/vue-vite/i18n-smell.config.mjs --fail-on none",
     "check:hardcoded": "node ./bin/i18n-smell-detector.js check-hardcoded --config ./examples/vue-vite/i18n-smell.config.mjs --fail-on none",
+    "example:basic": "node ./bin/i18n-smell-detector.js check --config ./examples/basic/i18n-smell.config.mjs --fail-on none",
     "test": "node --test"
   },
   "keywords": [

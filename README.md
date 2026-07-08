@@ -28,6 +28,7 @@ npm install -D i18n-smell-detector
 Run the check:
 
 ```bash
+npx i18n-smell-detector check --config i18n-smell.config.mjs
 npx i18n-smell-detector check-identical --config i18n-smell.config.mjs
 npx i18n-smell-detector check-hardcoded --config i18n-smell.config.mjs
 ```
@@ -39,20 +40,82 @@ npx i18n-smell-detector check-identical --format console
 npx i18n-smell-detector check-identical --format json
 npx i18n-smell-detector check-identical --format markdown
 npx i18n-smell-detector check-hardcoded --format json
+npx i18n-smell-detector check --format markdown --output i18n-report.md
 ```
+
+CLI options:
+
+| Option | Description |
+|---|---|
+| `-c, --config <path>` | Use a specific config file. |
+| `--format <format>` | Print `console`, `json`, or `markdown` output. |
+| `--fail-on <level>` | Exit with code `1` for findings at `high`, `medium`, or `low`. Use `none` while tuning. |
+| `--include-ignored` | Include ignored findings in the report. |
+| `--output <path>` | Write the full report to a file and print a short summary. |
+| `--baseline <path>` | Suppress findings stored in a baseline file. |
+| `--update-baseline` | Write the current findings to the baseline file. |
+| `-h, --help` | Show CLI help. |
 
 ## CI usage
 
 Use `--fail-on` to choose the lowest severity that should make the command exit with code `1`.
 
 ```bash
-npx i18n-smell-detector check-identical --config i18n-smell.config.mjs --fail-on high
+npx i18n-smell-detector check --config i18n-smell.config.mjs --fail-on high
 ```
 
 For a new project, it is often easier to start in reporting mode while tuning allowlists:
 
 ```bash
-npx i18n-smell-detector check-identical --config i18n-smell.config.mjs --fail-on none
+npx i18n-smell-detector check --config i18n-smell.config.mjs --fail-on none
+```
+
+### GitHub Actions example
+
+Add a workflow such as `.github/workflows/i18n-smell.yml`:
+
+```yaml
+name: i18n smell check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  i18n-smell:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - run: npm ci
+
+      - name: Run i18n checks
+        run: npx i18n-smell-detector check --config i18n-smell.config.mjs --fail-on high
+
+      - name: Write Markdown report
+        if: always()
+        run: npx i18n-smell-detector check --config i18n-smell.config.mjs --format markdown --output reports/i18n-smell.md --fail-on none
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: i18n-smell-report
+          path: reports/i18n-smell.md
+```
+
+For this repository, the local smoke commands are:
+
+```bash
+npm test
+npm run check
+npm run example:basic
+node bin/i18n-smell-detector.js --help
 ```
 
 ## Configuration
@@ -62,6 +125,10 @@ Create `i18n-smell.config.mjs`:
 ```js
 export default {
   baseLocale: 'en',
+  checks: {
+    identical: true,
+    hardcoded: true
+  },
   source: [
     'src/**/*.vue'
   ],
@@ -117,6 +184,8 @@ export default {
   trimWhitespace: true,
   ignoreCase: false,
   includeIgnored: false,
+  format: 'console',
+  baseline: '.i18n-smell-baseline.json',
   failOn: 'high'
 };
 ```
@@ -126,6 +195,7 @@ export default {
 | Option | Type | Default | Description |
 |---|---|---:|---|
 | `baseLocale` | `string` | `'en'` | Locale used as the comparison source. It must also be listed in `locales`. |
+| `checks` | `{ identical?: boolean, hardcoded?: boolean }` | both enabled | Checks run by the combined `check` command. Existing single-check commands ignore this setting. |
 | `source` | `string[]` | `['src/**/*.vue']` | Source globs used by `check-hardcoded`. `node_modules` is ignored. |
 | `locales` | `Record<string, string>` | `{}` | Map of locale codes to JSON locale file paths. Relative paths are resolved from the config file directory. |
 | `allowIdenticalKeys` | `(string \| RegExp)[]` | `[]` | Key rules that are allowed to match the base locale. String rules support `*` wildcards, for example `brand.*`. `RegExp` rules are tested against the flattened key. |
@@ -140,6 +210,9 @@ export default {
 | `ignoreCase` | `boolean` | `false` | Compare values case-insensitively when set to `true`. |
 | `ignoreSameLanguageFamily` | `boolean` | `true` | Ignore regional variants that share the same language family, such as `en` and `en-GB`. Set to `false` to check regional variants too. |
 | `includeIgnored` | `boolean` | `false` | Include ignored findings in reports. Can also be enabled with `--include-ignored`. |
+| `format` | `'console' \| 'json' \| 'markdown'` | `'console'` | Default report format. CLI `--format` takes precedence. |
+| `output` | `string` | unset | Report file path. CLI `--output` takes precedence. |
+| `baseline` | `string` | unset | Baseline file path used by `--baseline` or `--update-baseline`. |
 
 ## Example output
 
@@ -241,6 +314,69 @@ JSON output includes source locations:
 }
 ```
 
+## Running All Checks
+
+Use `check` to run every enabled check in one command:
+
+```bash
+npx i18n-smell-detector check --config i18n-smell.config.mjs
+```
+
+Disable checks during gradual rollout:
+
+```js
+export default {
+  checks: {
+    identical: true,
+    hardcoded: false
+  }
+};
+```
+
+Combined JSON output groups counts by check:
+
+```json
+{
+  "summary": {
+    "identical": {
+      "high": 2,
+      "medium": 1,
+      "low": 0,
+      "ignored": 16
+    },
+    "hardcoded": {
+      "high": 3,
+      "medium": 2,
+      "low": 0,
+      "ignored": 3
+    }
+  },
+  "issues": []
+}
+```
+
+## Writing Reports
+
+Use `--output` to write the full report to a file. The CLI prints a short summary to stdout after writing.
+
+```bash
+npx i18n-smell-detector check --format markdown --output reports/i18n-report.md
+npx i18n-smell-detector check --format json --output reports/i18n-report.json
+```
+
+Markdown output for `check` includes a summary table and one section per check, which makes it suitable for CI artifacts.
+
+## Gradual Adoption
+
+Use a baseline to ignore existing findings while still failing CI for new ones:
+
+```bash
+npx i18n-smell-detector check --baseline .i18n-smell-baseline.json --update-baseline
+npx i18n-smell-detector check --baseline .i18n-smell-baseline.json
+```
+
+The baseline stores stable issue identifiers. Updating it removes findings that no longer exist and records the current visible findings.
+
 ## Exit codes
 
 | Code | Meaning |
@@ -326,6 +462,7 @@ Useful tuning patterns:
 npm install
 npm test
 npm run check
+npm run example:basic
 ```
 
 ## License

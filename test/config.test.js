@@ -26,6 +26,10 @@ test('loadConfig applies documented defaults', async () => {
         allowIdenticalValues: [],
         placeholderPatterns: undefined,
         source: ['src/**/*.vue'],
+        checks: {
+          identical: true,
+          hardcoded: true,
+        },
         hardcoded: undefined,
         ignoreCodeLike: true,
         ignoreSameLanguageFamily: true,

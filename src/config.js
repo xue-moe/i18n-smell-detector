@@ -98,6 +98,22 @@ function validateConfig(config) {
     throw new Error('Config hardcoded must be an object');
   }
 
+  if ('checks' in candidate && (!candidate.checks || typeof candidate.checks !== 'object' || Array.isArray(candidate.checks))) {
+    throw new Error('Config checks must be an object');
+  }
+
+  if ('format' in candidate && !['console', 'json', 'markdown'].includes(candidate.format)) {
+    throw new Error('Config format must be console, json, or markdown');
+  }
+
+  if ('output' in candidate && typeof candidate.output !== 'string') {
+    throw new Error('Config output must be a file path string');
+  }
+
+  if ('baseline' in candidate && typeof candidate.baseline !== 'string') {
+    throw new Error('Config baseline must be a file path string');
+  }
+
   const hardcoded = /** @type {Record<string, unknown>} */ (candidate.hardcoded || {});
   if ('vueAttributes' in hardcoded && !isStringArray(hardcoded.vueAttributes)) {
     throw new Error('Config hardcoded.vueAttributes must be an array of strings');
@@ -118,7 +134,17 @@ function withDefaults(config) {
     ignoreCase: false,
     includeIgnored: false,
     failOn: 'high',
+    checks: {
+      identical: true,
+      hardcoded: true,
+      ...(config.checks || {}),
+    },
     ...config,
+    checks: {
+      identical: true,
+      hardcoded: true,
+      ...(config.checks || {}),
+    },
     source: config.source || ['src/**/*.vue'],
     hardcoded: normalizeHardcodedConfig(config.hardcoded || {}),
     placeholderPatterns: normalizePlaceholderPatterns(config.placeholderPatterns || DEFAULT_PLACEHOLDER_PATTERNS),

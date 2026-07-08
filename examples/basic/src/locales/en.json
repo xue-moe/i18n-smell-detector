@@ -1,0 +1,12 @@
+{
+  "brand": {
+    "name": "Demo"
+  },
+  "common": {
+    "ok": "OK",
+    "save": "Save"
+  },
+  "home": {
+    "title": "Welcome back"
+  }
+}
