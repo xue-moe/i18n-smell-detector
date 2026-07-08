@@ -1,3 +1,10 @@
+## [0.4.2](https://github.com/xue-moe/i18n-smell-detector/compare/v0.4.1...v0.4.2) (2026-07-08)
+
+
+### Bug Fixes
+
+* **security:** harden markdown escaping and ci permissions ([3cdd48b](https://github.com/xue-moe/i18n-smell-detector/commit/3cdd48b81103b152b8261f31d433c3102ae91afc))
+
 ## [0.4.1](https://github.com/xue-moe/i18n-smell-detector/compare/v0.4.0...v0.4.1) (2026-07-08)
 
 
