@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderCombinedReport } from '../src/reporters/combined.js';
+import { renderMarkdownReport } from '../src/reporters/markdown.js';
 
 test('combined Markdown output groups checks with a summary table', () => {
   const report = renderCombinedReport([
@@ -32,4 +33,23 @@ test('combined Markdown output groups checks with a summary table', () => {
   assert.match(report, /## Identical translations/);
   assert.match(report, /## Hardcoded strings/);
   assert.match(report, /No hardcoded strings found\./);
+});
+
+test('Markdown output escapes table cell separators and backslashes', () => {
+  const report = renderMarkdownReport([
+    {
+      key: 'home.path',
+      baseLocale: 'en',
+      targetLocale: 'zh',
+      value: String.raw`C:\docs|title`,
+      severity: 'high',
+      reason: 'line one\nline two',
+    },
+  ], {
+    heading: 'Identical translations',
+    includeIgnored: false,
+  });
+
+  assert.match(report, /C:\\\\docs\\\|title/);
+  assert.match(report, /line one<br>line two/);
 });
