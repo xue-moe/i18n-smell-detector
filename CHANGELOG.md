@@ -1,3 +1,10 @@
+## [0.5.2](https://github.com/xue-moe/i18n-smell-detector/compare/v0.5.1...v0.5.2) (2026-07-09)
+
+
+### Bug Fixes
+
+* **reporters:** harden markdown table escaping ([cc7702c](https://github.com/xue-moe/i18n-smell-detector/commit/cc7702c761132f1a34f6247c74d15e1ffde9ed3c))
+
 ## [0.5.1](https://github.com/xue-moe/i18n-smell-detector/compare/v0.5.0...v0.5.1) (2026-07-09)
 
 
