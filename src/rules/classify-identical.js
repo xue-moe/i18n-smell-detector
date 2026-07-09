@@ -21,9 +21,7 @@ function isCodeLike(value) {
 function isPlaceholderOnly(value, patterns) {
   let text = value.trim();
 
-  const orderedPatterns = [...(patterns || [])].sort((a, b) => b.source.length - a.source.length);
-
-  for (const pattern of orderedPatterns) {
+  for (const pattern of patterns || []) {
     pattern.lastIndex = 0;
     text = text.replace(pattern, '');
   }

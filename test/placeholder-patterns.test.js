@@ -7,7 +7,7 @@ const baseConfig = {
   locales: {},
   allowIdenticalKeys: [],
   allowIdenticalValues: [],
-  placeholderPatterns: [/\{[^}]+\}/g, /\{\{[^}]+\}\}/g, /%[sdif]/g, /%\([^)]+\)[sdif]/g],
+  placeholderPatterns: [/\{\{[^}]+\}\}/g, /%\([^)]+\)[sdif]/g, /\{[^}]+\}/g, /%[sdif]/g],
   ignoreCodeLike: true,
   ignoreSameLanguageFamily: true,
   trimWhitespace: true,

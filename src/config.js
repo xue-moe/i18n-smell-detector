@@ -2,6 +2,7 @@ import { access } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
+import { appError } from './errors.js';
 
 const require = createRequire(import.meta.url);
 
@@ -51,7 +52,7 @@ async function exists(filePath) {
 export async function resolveConfigPath(explicitPath, cwd) {
   if (explicitPath) {
     const absolute = path.isAbsolute(explicitPath) ? explicitPath : path.resolve(cwd, explicitPath);
-    if (!(await exists(absolute))) throw new Error(`Config file not found: ${absolute}`);
+    if (!(await exists(absolute))) throw appError(`Config file not found: ${absolute}`, 'CONFIG_NOT_FOUND');
     return absolute;
   }
 
@@ -60,7 +61,7 @@ export async function resolveConfigPath(explicitPath, cwd) {
     if (await exists(absolute)) return absolute;
   }
 
-  throw new Error(`Config file not found. Expected one of: ${CONFIG_FILES.join(', ')}`);
+  throw appError(`Config file not found. Expected one of: ${CONFIG_FILES.join(', ')}`, 'CONFIG_NOT_FOUND');
 }
 
 export async function loadConfig(configPath) {
@@ -79,21 +80,21 @@ export async function loadConfig(configPath) {
 
 function validateConfig(config) {
   if (!config || typeof config !== 'object') {
-    throw new Error('Config must export an object');
+    throw appError('Config must export an object', 'CONFIG_INVALID');
   }
 
   const candidate = /** @type {Record<string, unknown>} */ (config);
   if ('baseLocale' in candidate && (typeof candidate.baseLocale !== 'string' || !candidate.baseLocale)) {
-    throw new Error('Config baseLocale must be a non-empty string');
+    throw appError('Config baseLocale must be a non-empty string', 'CONFIG_INVALID');
   }
 
   if ('locales' in candidate && (!candidate.locales || typeof candidate.locales !== 'object' || Array.isArray(candidate.locales))) {
-    throw new Error('Config locales must be an object');
+    throw appError('Config locales must be an object', 'CONFIG_INVALID');
   }
 
   for (const [locale, value] of Object.entries(candidate.locales || {})) {
     if (typeof value !== 'string' || !value) {
-      throw new Error(`Config locales.${locale} must be a file path string`);
+      throw appError(`Config locales.${locale} must be a file path string`, 'CONFIG_INVALID');
     }
   }
 
@@ -101,45 +102,45 @@ function validateConfig(config) {
   validateRuleList(candidate.allowIdenticalValues, 'allowIdenticalValues');
 
   if ('placeholderPatterns' in candidate && !Array.isArray(candidate.placeholderPatterns)) {
-    throw new Error('Config placeholderPatterns must be an array of strings or RegExp objects');
+    throw appError('Config placeholderPatterns must be an array of strings or RegExp objects', 'CONFIG_INVALID');
   }
 
   if ('source' in candidate && !isStringArray(candidate.source)) {
-    throw new Error('Config source must be an array of glob strings');
+    throw appError('Config source must be an array of glob strings', 'CONFIG_INVALID');
   }
 
   if ('hardcoded' in candidate && (!candidate.hardcoded || typeof candidate.hardcoded !== 'object' || Array.isArray(candidate.hardcoded))) {
-    throw new Error('Config hardcoded must be an object');
+    throw appError('Config hardcoded must be an object', 'CONFIG_INVALID');
   }
 
   if ('checks' in candidate && (!candidate.checks || typeof candidate.checks !== 'object' || Array.isArray(candidate.checks))) {
-    throw new Error('Config checks must be an object');
+    throw appError('Config checks must be an object', 'CONFIG_INVALID');
   }
 
   if ('format' in candidate && !['console', 'json', 'markdown', 'sarif'].includes(candidate.format)) {
-    throw new Error('Config format must be console, json, markdown, or sarif');
+    throw appError('Config format must be console, json, markdown, or sarif', 'CONFIG_INVALID');
   }
 
   if ('output' in candidate && typeof candidate.output !== 'string') {
-    throw new Error('Config output must be a file path string');
+    throw appError('Config output must be a file path string', 'CONFIG_INVALID');
   }
 
   if ('baseline' in candidate && typeof candidate.baseline !== 'string') {
-    throw new Error('Config baseline must be a file path string');
+    throw appError('Config baseline must be a file path string', 'CONFIG_INVALID');
   }
 
   const hardcoded = /** @type {Record<string, unknown>} */ (candidate.hardcoded || {});
   if ('vueAttributes' in hardcoded && !isStringArray(hardcoded.vueAttributes)) {
-    throw new Error('Config hardcoded.vueAttributes must be an array of strings');
+    throw appError('Config hardcoded.vueAttributes must be an array of strings', 'CONFIG_INVALID');
   }
   if ('jsxAttributes' in hardcoded && !isStringArray(hardcoded.jsxAttributes)) {
-    throw new Error('Config hardcoded.jsxAttributes must be an array of strings');
+    throw appError('Config hardcoded.jsxAttributes must be an array of strings', 'CONFIG_INVALID');
   }
   if ('functions' in hardcoded && !isStringArray(hardcoded.functions)) {
-    throw new Error('Config hardcoded.functions must be an array of strings');
+    throw appError('Config hardcoded.functions must be an array of strings', 'CONFIG_INVALID');
   }
   if ('ignoreFiles' in hardcoded && !isStringArray(hardcoded.ignoreFiles)) {
-    throw new Error('Config hardcoded.ignoreFiles must be an array of glob strings');
+    throw appError('Config hardcoded.ignoreFiles must be an array of glob strings', 'CONFIG_INVALID');
   }
   validateRuleList(hardcoded.ignoreValues, 'hardcoded.ignoreValues');
   validateRuleList(hardcoded.ignorePatterns, 'hardcoded.ignorePatterns');
@@ -157,12 +158,6 @@ function withDefaults(config) {
     ignoreCase: false,
     includeIgnored: false,
     failOn: 'high',
-    checks: {
-      identical: true,
-      hardcoded: true,
-      placeholders: true,
-      ...(config.checks || {}),
-    },
     ...config,
     checks: {
       identical: true,
@@ -183,11 +178,11 @@ function isStringArray(value) {
 
 function validateRuleList(rules, name) {
   if (rules === undefined) return;
-  if (!Array.isArray(rules)) throw new Error(`Config ${name} must be an array`);
+  if (!Array.isArray(rules)) throw appError(`Config ${name} must be an array`, 'CONFIG_INVALID');
 
   for (const rule of rules) {
     if (typeof rule !== 'string' && !(rule instanceof RegExp)) {
-      throw new Error(`Config ${name} entries must be strings or RegExp objects`);
+      throw appError(`Config ${name} entries must be strings or RegExp objects`, 'CONFIG_INVALID');
     }
   }
 }
@@ -197,15 +192,15 @@ function normalizePlaceholderPatterns(patterns) {
     if (pattern instanceof RegExp) return withGlobalFlag(pattern);
 
     if (typeof pattern !== 'string') {
-      throw new Error('Config placeholderPatterns entries must be strings or RegExp objects');
+      throw appError('Config placeholderPatterns entries must be strings or RegExp objects', 'CONFIG_INVALID');
     }
 
     try {
       return new RegExp(pattern, 'g');
     } catch (error) {
-      throw new Error(`Invalid placeholder pattern "${pattern}": ${error.message}`);
+      throw appError(`Invalid placeholder pattern "${pattern}": ${error.message}`, 'CONFIG_INVALID');
     }
-  });
+  }).sort((a, b) => b.source.length - a.source.length);
 }
 
 function normalizeHardcodedConfig(config) {
@@ -223,13 +218,13 @@ function normalizeRegexRules(rules, name) {
   return rules.map((rule) => {
     if (rule instanceof RegExp) return rule;
     if (typeof rule !== 'string') {
-      throw new Error(`Config ${name} entries must be strings or RegExp objects`);
+      throw appError(`Config ${name} entries must be strings or RegExp objects`, 'CONFIG_INVALID');
     }
 
     try {
       return new RegExp(rule);
     } catch (error) {
-      throw new Error(`Invalid ${name} pattern "${rule}": ${error.message}`);
+      throw appError(`Invalid ${name} pattern "${rule}": ${error.message}`, 'CONFIG_INVALID');
     }
   });
 }

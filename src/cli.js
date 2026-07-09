@@ -1,7 +1,9 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { Command, InvalidArgumentError } from 'commander';
 import { applyBaseline, loadBaseline, writeBaseline } from './baseline.js';
 import { loadConfig, resolveConfigPath } from './config.js';
+import { appError } from './errors.js';
 import { flattenResults, renderCombinedReport, summarizeResults } from './reporters/combined.js';
 import { renderReport } from './reporters/index.js';
 import { enabledChecks, runChecks } from './run-checks.js';
@@ -33,42 +35,77 @@ Example:
 `;
 
 function parseArgs(argv) {
-  const args = argv.slice(2);
-  const command = args[0] && !args[0].startsWith('-') ? args.shift() : 'check-identical';
-  const options = { command, includeIgnored: false, help: false, updateBaseline: false };
+  const program = new Command()
+    .name('i18n-smell-detector')
+    .usage('[command] [options]')
+    .description('Find localization issues that key coverage checks miss.')
+    .argument('[command]', 'check-identical | check-hardcoded | check-placeholders | check', 'check-identical')
+    .option('-c, --config <path>', 'Config file path')
+    .option('--format <format>', 'console | json | markdown | sarif', readFormat)
+    .option('--fail-on <level>', 'high | medium | low | none', readFailOn)
+    .option('--output <path>', 'Write the full report to a file')
+    .option('--baseline <path>', 'Read a baseline file')
+    .option('--update-baseline', 'Write the current issues to the baseline file', false)
+    .option('--include-ignored', 'Print ignored matches as well', false)
+    .addHelpText('after', `
 
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
+Example:
+  i18n-smell-detector check-identical -c i18n-smell.config.mjs --format markdown
+  i18n-smell-detector check-hardcoded -c i18n-smell.config.mjs --format json
+  i18n-smell-detector check-placeholders -c i18n-smell.config.mjs --format json`)
+    .exitOverride()
+    .configureOutput({
+      writeOut: () => {},
+      writeErr: () => {},
+      outputError: () => {},
+    });
 
-    if (arg === '-h' || arg === '--help') {
-      options.help = true;
-    } else if (arg === '-c' || arg === '--config') {
-      options.configPath = args[++index];
-    } else if (arg === '--format') {
-      options.format = readChoice(args[++index], ['console', 'json', 'markdown', 'sarif'], 'format');
-    } else if (arg === '--fail-on') {
-      options.failOn = readChoice(args[++index], ['none', 'low', 'medium', 'high'], 'fail-on level');
-    } else if (arg === '--output') {
-      options.output = args[++index];
-    } else if (arg === '--baseline') {
-      options.baseline = args[++index];
-    } else if (arg === '--update-baseline') {
-      options.updateBaseline = true;
-    } else if (arg === '--include-ignored') {
-      options.includeIgnored = true;
-    } else {
-      throw new Error(`Unknown option: ${arg}`);
-    }
+  try {
+    program.parse(argv, { from: 'node' });
+  } catch (error) {
+    if (error.code === 'commander.helpDisplayed') return { help: true };
+    throw appError(formatCommanderError(error), 'CLI_USAGE');
   }
 
-  return options;
+  const [command] = program.args;
+  if (!['check-identical', 'check-hardcoded', 'check-placeholders', 'check'].includes(command)) {
+    throw appError(`Unknown command: ${command}\n${HELP}`, 'CLI_USAGE');
+  }
+
+  return {
+    command,
+    configPath: program.opts().config,
+    format: program.opts().format,
+    failOn: program.opts().failOn,
+    output: program.opts().output,
+    baseline: program.opts().baseline,
+    updateBaseline: program.opts().updateBaseline,
+    includeIgnored: program.opts().includeIgnored,
+    help: false,
+  };
+}
+
+function readFormat(value) {
+  return readChoice(value, ['console', 'json', 'markdown', 'sarif'], 'format');
+}
+
+function readFailOn(value) {
+  return readChoice(value, ['none', 'low', 'medium', 'high'], 'fail-on level');
 }
 
 function readChoice(value, choices, name) {
-  if (!choices.includes(value)) {
-    throw new Error(`Unsupported ${name}: ${value}`);
-  }
+  if (!choices.includes(value)) throw new InvalidArgumentError(`Unsupported ${name}: ${value}`);
   return value;
+}
+
+function formatCommanderError(error) {
+  if (error.code === 'commander.unknownOption') return `Unknown option: ${extractQuotedValue(error.message) || error.optionName || ''}`.trim();
+  if (error.code === 'commander.missingArgument') return `Missing value for option: ${error.optionName?.() || ''}`.trim();
+  return error.message.replace(/^error: /, '');
+}
+
+function extractQuotedValue(value) {
+  return value.match(/'([^']+)'/)?.[1];
 }
 
 export async function runCli(argv) {
@@ -99,7 +136,7 @@ export async function runCli(argv) {
   const rawResults = await runChecks(effectiveConfig, configDir, checks);
 
   if (options.updateBaseline) {
-    if (!effectiveConfig.baseline) throw new Error('Baseline path is required for --update-baseline');
+    if (!effectiveConfig.baseline) throw appError('Baseline path is required for --update-baseline', 'CLI_USAGE');
     const baselinePath = resolveFromConfigDir(effectiveConfig.baseline, configDir);
     const count = await writeBaseline(baselinePath, rawResults);
     console.log(`Baseline updated: ${effectiveConfig.baseline} (${count} issues)`);
@@ -164,7 +201,7 @@ async function writeOutput(filePath, report) {
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, report);
   } catch (error) {
-    throw new Error(`Failed to write report file: ${filePath}\nReason: ${error.message}`);
+    throw appError(`Failed to write report file: ${filePath}\nReason: ${error.message}`, 'OUTPUT_WRITE_FAILED');
   }
 }
 

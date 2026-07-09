@@ -41,10 +41,10 @@ test('loadConfig applies documented defaults', async () => {
       }
     );
     assert.deepEqual(config.placeholderPatterns.map((pattern) => pattern.source), [
-      String.raw`\{\{[^}]+\}\}`,
       String.raw`(?<!\{)\{[^{}]+\}(?!\})`,
-      String.raw`%[sdif]`,
       String.raw`%\([^)]+\)[sdif]`,
+      String.raw`\{\{[^}]+\}\}`,
+      String.raw`%[sdif]`,
       String.raw`\$\d+`,
     ]);
     assert.deepEqual(config.placeholderPatterns.map((pattern) => pattern.flags), ['g', 'g', 'g', 'g', 'g']);

@@ -1,5 +1,6 @@
 import path from 'node:path';
 import fg from 'fast-glob';
+import { appError } from './errors.js';
 import { scanJsSource } from './source/scan-js-source.js';
 import { scanVueSfc } from './source/scan-vue-sfc.js';
 
@@ -20,7 +21,7 @@ export async function checkHardcodedStrings(config, baseDir) {
   });
 
   if (files.length === 0) {
-    throw new Error(`No source files matched: ${config.source.join(', ')}`);
+    throw appError(`No source files matched: ${config.source.join(', ')}`, 'SOURCE_NOT_FOUND');
   }
 
   const issues = [];

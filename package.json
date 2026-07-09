@@ -46,6 +46,7 @@
     "@babel/parser": "^7.29.7",
     "@vue/compiler-dom": "^3.5.39",
     "@vue/compiler-sfc": "^3.5.39",
+    "commander": "^12.1.0",
     "fast-glob": "^3.3.3"
   },
   "devDependencies": {
