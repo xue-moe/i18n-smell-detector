@@ -1,3 +1,10 @@
+## [0.5.1](https://github.com/xue-moe/i18n-smell-detector/compare/v0.5.0...v0.5.1) (2026-07-09)
+
+
+### Bug Fixes
+
+* **cli:** harden parsing and config normalization ([39032f1](https://github.com/xue-moe/i18n-smell-detector/commit/39032f1bed013e94e8d7e4ca6f021c718b4658a2))
+
 # [0.5.0](https://github.com/xue-moe/i18n-smell-detector/compare/v0.4.2...v0.5.0) (2026-07-09)
 
 
