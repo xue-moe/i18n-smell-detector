@@ -41,7 +41,7 @@ test('Markdown output escapes table cell separators and backslashes', () => {
       key: 'home.path',
       baseLocale: 'en',
       targetLocale: 'zh',
-      value: String.raw`C:\docs|title`,
+      value: 'C:\\docs|title *bold* _em_ `code` [link]',
       severity: 'high',
       reason: 'line one\nline two',
     },
@@ -50,6 +50,6 @@ test('Markdown output escapes table cell separators and backslashes', () => {
     includeIgnored: false,
   });
 
-  assert.match(report, /C:\\\\docs\\\|title/);
-  assert.match(report, /line one<br>line two/);
+  assert.ok(report.includes("C:\\\\docs\\|title \\*bold\\* \\_em\\_ \\`code\\` \\[link\\]"));
+  assert.match(report, /line one line two/);
 });

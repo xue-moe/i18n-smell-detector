@@ -116,10 +116,6 @@ export async function runCli(argv) {
     return;
   }
 
-  if (!['check-identical', 'check-hardcoded', 'check-placeholders', 'check'].includes(options.command)) {
-    throw new Error(`Unknown command: ${options.command}\n${HELP}`);
-  }
-
   const configPath = await resolveConfigPath(options.configPath, process.cwd());
   const config = await loadConfig(configPath);
   const effectiveConfig = {
