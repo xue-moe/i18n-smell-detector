@@ -1,5 +1,6 @@
 import path from 'node:path';
 import fg from 'fast-glob';
+import { scanJsSource } from './source/scan-js-source.js';
 import { scanVueSfc } from './source/scan-vue-sfc.js';
 
 function compareIssues(a, b) {
@@ -15,7 +16,7 @@ export async function checkHardcodedStrings(config, baseDir) {
     cwd: baseDir,
     absolute: true,
     onlyFiles: true,
-    ignore: ['**/node_modules/**'],
+    ignore: ['**/node_modules/**', ...(config.hardcoded.ignoreFiles || [])],
   });
 
   if (files.length === 0) {
@@ -24,7 +25,7 @@ export async function checkHardcodedStrings(config, baseDir) {
 
   const issues = [];
   for (const file of files) {
-    const fileIssues = await scanVueSfc(file, config);
+    const fileIssues = await scanSourceFile(file, config);
     for (const issue of fileIssues) {
       issues.push({
         ...issue,
@@ -34,4 +35,10 @@ export async function checkHardcodedStrings(config, baseDir) {
   }
 
   return issues.sort(compareIssues);
+}
+
+async function scanSourceFile(file, config) {
+  if (file.endsWith('.vue')) return scanVueSfc(file, config);
+  if (/\.[cm]?[jt]sx?$/.test(file)) return scanJsSource(file, config);
+  return [];
 }

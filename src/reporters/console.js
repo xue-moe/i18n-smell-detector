@@ -34,6 +34,9 @@ export function renderConsoleReport(issues, options) {
   for (const issue of visible) {
     lines.push(`${label(issue.severity)} ${formatLocation(issue)}`);
     lines.push(`  value: "${preview(issue.value)}"`);
+    for (const detail of formatDetails(issue)) {
+      lines.push(`  ${detail}`);
+    }
     lines.push(`  reason: ${issue.reason}`);
   }
 
@@ -43,4 +46,11 @@ export function renderConsoleReport(issues, options) {
 function formatLocation(issue) {
   if (issue.file) return `${issue.file}:${issue.line}:${issue.column}`;
   return `${issue.targetLocale}.${issue.key}`;
+}
+
+function formatDetails(issue) {
+  const details = [];
+  if (issue.missing?.length) details.push(`missing: ${issue.missing.join(', ')}`);
+  if (issue.extra?.length) details.push(`extra: ${issue.extra.join(', ')}`);
+  return details;
 }

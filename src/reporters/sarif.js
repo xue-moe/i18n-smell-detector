@@ -1,0 +1,105 @@
+export function renderSarifReport(results, options) {
+  const visible = results.flatMap((result) => {
+    const issues = options.includeIgnored ? result.issues : result.issues.filter((issue) => issue.severity !== 'ignored');
+    return issues.map((issue) => ({ check: result.check, title: result.heading, ...issue }));
+  });
+  const rules = new Map();
+
+  for (const issue of visible) {
+    const ruleId = ruleIdFor(issue);
+    if (!rules.has(ruleId)) {
+      rules.set(ruleId, {
+        id: ruleId,
+        name: issue.reason,
+        shortDescription: { text: issue.reason },
+        fullDescription: { text: `${issue.title || issue.check}: ${issue.reason}` },
+        defaultConfiguration: { level: sarifLevel(issue.severity) },
+        properties: {
+          check: issue.check,
+          severity: issue.severity,
+        },
+      });
+    }
+  }
+
+  return `${JSON.stringify({
+    version: '2.1.0',
+    $schema: 'https://json.schemastore.org/sarif-2.1.0.json',
+    runs: [
+      {
+        tool: {
+          driver: {
+            name: 'i18n-smell-detector',
+            informationUri: 'https://github.com/xue-moe/i18n-smell-detector',
+            rules: [...rules.values()],
+          },
+        },
+        results: visible.map(toSarifResult),
+      },
+    ],
+  }, null, 2)}\n`;
+}
+
+function toSarifResult(issue) {
+  const result = {
+    ruleId: ruleIdFor(issue),
+    level: sarifLevel(issue.severity),
+    message: { text: messageFor(issue) },
+    properties: {
+      id: issue.id,
+      check: issue.check,
+      severity: issue.severity,
+      reason: issue.reason,
+      key: issue.key,
+      baseLocale: issue.baseLocale,
+      targetLocale: issue.targetLocale,
+      value: issue.value,
+      missing: issue.missing,
+      extra: issue.extra,
+    },
+  };
+
+  if (issue.file) {
+    result.locations = [
+      {
+        physicalLocation: {
+          artifactLocation: { uri: issue.file },
+          region: {
+            startLine: issue.line,
+            startColumn: issue.column,
+          },
+        },
+      },
+    ];
+  }
+
+  result.partialFingerprints = {
+    stableId: issue.id,
+  };
+
+  return result;
+}
+
+function ruleIdFor(issue) {
+  return `i18n-smell/${issue.check}/${slug(issue.reason)}`;
+}
+
+function sarifLevel(severity) {
+  if (severity === 'high') return 'error';
+  if (severity === 'medium') return 'warning';
+  if (severity === 'low') return 'note';
+  return 'none';
+}
+
+function messageFor(issue) {
+  if (issue.file) return `${issue.reason}: ${issue.value}`;
+  const details = [];
+  if (issue.missing?.length) details.push(`missing ${issue.missing.join(', ')}`);
+  if (issue.extra?.length) details.push(`extra ${issue.extra.join(', ')}`);
+  const suffix = details.length ? ` (${details.join('; ')})` : '';
+  return `${issue.targetLocale}.${issue.key}: ${issue.reason}${suffix}`;
+}
+
+function slug(value) {
+  return String(value).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'issue';
+}

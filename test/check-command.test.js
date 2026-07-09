@@ -37,7 +37,7 @@ test('combined check skips disabled checks', async () => {
     await writeFile(path.join(tempDir, 'src/locales/zh.json'), '{"home":{"title":"Welcome"}}');
     await writeFile(path.join(tempDir, 'i18n-smell.config.mjs'), `
       export default {
-        checks: { identical: true, hardcoded: false },
+        checks: { identical: true, hardcoded: false, placeholders: false },
         locales: {
           en: './src/locales/en.json',
           zh: './src/locales/zh.json'
@@ -50,6 +50,43 @@ test('combined check skips disabled checks', async () => {
     assert.equal(result.status, 0);
     assert.match(result.stdout, /identical translations/);
     assert.doesNotMatch(result.stdout, /hardcoded strings/);
+    assert.doesNotMatch(result.stdout, /placeholder mismatches/);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('check-placeholders command reports locale placeholder mismatches', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-placeholders-'));
+
+  try {
+    await mkdir(path.join(tempDir, 'src/locales'), { recursive: true });
+    await writeFile(path.join(tempDir, 'src/locales/en.json'), '{"user":{"greeting":"Hello {name}"}}');
+    await writeFile(path.join(tempDir, 'src/locales/zh.json'), '{"user":{"greeting":"你好"}}');
+    await writeFile(path.join(tempDir, 'i18n-smell.config.mjs'), `
+      export default {
+        locales: {
+          en: './src/locales/en.json',
+          zh: './src/locales/zh.json'
+        }
+      };
+    `);
+
+    const result = run([
+      'check-placeholders',
+      '--config',
+      path.join(tempDir, 'i18n-smell.config.mjs'),
+      '--format',
+      'json',
+      '--fail-on',
+      'none',
+    ]);
+
+    assert.equal(result.status, 0);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.issues[0].key, 'user.greeting');
+    assert.deepEqual(report.issues[0].missing, ['{name}']);
+    assert.equal(report.issues[0].reason, 'missing placeholder');
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 export function issueId(check, issue) {
-  if (check === 'identical') return `identical:${issue.targetLocale}:${issue.key}`;
+  if (check === 'identical' || check === 'placeholders') return `${check}:${issue.targetLocale}:${issue.key}`;
   return `hardcoded:${issue.file}:${issue.line}:${issue.column}:${issue.value}`;
 }
 
@@ -25,8 +25,6 @@ export async function loadBaseline(filePath) {
 }
 
 export function applyBaseline(results, ids) {
-  if (!ids.size) return results;
-
   return results.map((result) => ({
     ...result,
     issues: result.issues.map((issue) => {
@@ -58,7 +56,7 @@ function toBaselineIssue(check, issue) {
     value: issue.value,
   };
 
-  if (check === 'identical') {
+  if (check === 'identical' || check === 'placeholders') {
     return {
       ...base,
       key: issue.key,

@@ -25,10 +25,11 @@ test('loadConfig applies documented defaults', async () => {
         allowIdenticalKeys: [],
         allowIdenticalValues: [],
         placeholderPatterns: undefined,
-        source: ['src/**/*.vue'],
+        source: ['src/**/*.{vue,js,jsx,ts,tsx}'],
         checks: {
           identical: true,
           hardcoded: true,
+          placeholders: true,
         },
         hardcoded: undefined,
         ignoreCodeLike: true,
@@ -41,9 +42,12 @@ test('loadConfig applies documented defaults', async () => {
     );
     assert.deepEqual(config.placeholderPatterns.map((pattern) => pattern.source), [
       String.raw`\{\{[^}]+\}\}`,
-      String.raw`\{[^}]+\}`,
+      String.raw`(?<!\{)\{[^{}]+\}(?!\})`,
+      String.raw`%[sdif]`,
+      String.raw`%\([^)]+\)[sdif]`,
+      String.raw`\$\d+`,
     ]);
-    assert.deepEqual(config.placeholderPatterns.map((pattern) => pattern.flags), ['g', 'g']);
+    assert.deepEqual(config.placeholderPatterns.map((pattern) => pattern.flags), ['g', 'g', 'g', 'g', 'g']);
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

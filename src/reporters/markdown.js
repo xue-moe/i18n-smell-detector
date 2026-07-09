@@ -22,6 +22,9 @@ export function renderMarkdownReport(issues, options) {
   if (visible.some((issue) => issue.file)) {
     lines.push('| Level | Location | Value | Reason |');
     lines.push('|---|---|---|---|');
+  } else if (visible.some((issue) => issue.missing || issue.extra)) {
+    lines.push('| Level | Locale | Key | Value | Missing | Extra | Reason |');
+    lines.push('|---|---|---|---|---|---|---|');
   } else {
     lines.push('| Level | Locale | Key | Value | Reason |');
     lines.push('|---|---|---|---|---|');
@@ -33,9 +36,15 @@ export function renderMarkdownReport(issues, options) {
         `| ${escapeCell(issue.severity)} | ${escapeCell(formatLocation(issue))} | ${escapeCell(issue.value)} | ${escapeCell(issue.reason)} |`
       );
     } else {
-      lines.push(
-        `| ${escapeCell(issue.severity)} | ${escapeCell(issue.targetLocale)} | ${escapeCell(issue.key)} | ${escapeCell(issue.value)} | ${escapeCell(issue.reason)} |`
-      );
+      if (issue.missing || issue.extra) {
+        lines.push(
+          `| ${escapeCell(issue.severity)} | ${escapeCell(issue.targetLocale)} | ${escapeCell(issue.key)} | ${escapeCell(issue.value)} | ${escapeCell((issue.missing || []).join(', '))} | ${escapeCell((issue.extra || []).join(', '))} | ${escapeCell(issue.reason)} |`
+        );
+      } else {
+        lines.push(
+          `| ${escapeCell(issue.severity)} | ${escapeCell(issue.targetLocale)} | ${escapeCell(issue.key)} | ${escapeCell(issue.value)} | ${escapeCell(issue.reason)} |`
+        );
+      }
     }
   }
 

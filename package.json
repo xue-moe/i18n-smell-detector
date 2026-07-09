@@ -1,7 +1,7 @@
 {
   "name": "i18n-smell-detector",
   "version": "0.4.2",
-  "description": "Find locale values copied from the base locale.",
+  "description": "Find copied locale values, placeholder mismatches, and hardcoded user-visible strings.",
   "type": "module",
   "bin": {
     "i18n-smell-detector": "./bin/i18n-smell-detector.js"
@@ -43,6 +43,7 @@
     "node": ">=18.17"
   },
   "dependencies": {
+    "@babel/parser": "^7.29.7",
     "@vue/compiler-dom": "^3.5.39",
     "@vue/compiler-sfc": "^3.5.39",
     "fast-glob": "^3.3.3"

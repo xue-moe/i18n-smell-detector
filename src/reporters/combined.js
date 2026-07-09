@@ -1,10 +1,12 @@
 import { renderConsoleReport } from './console.js';
 import { renderMarkdownReport } from './markdown.js';
+import { renderSarifReport } from './sarif.js';
 import { summarizeIssues } from './summary.js';
 
 export function renderCombinedReport(results, options) {
   if (options.format === 'json') return renderCombinedJson(results, options);
   if (options.format === 'markdown') return renderCombinedMarkdown(results, options);
+  if (options.format === 'sarif') return renderSarifReport(results, options);
   return renderCombinedConsole(results, options);
 }
 

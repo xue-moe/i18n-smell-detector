@@ -14,7 +14,10 @@ const CONFIG_FILES = [
 
 const DEFAULT_PLACEHOLDER_PATTERNS = [
   String.raw`\{\{[^}]+\}\}`,
-  String.raw`\{[^}]+\}`,
+  String.raw`(?<!\{)\{[^{}]+\}(?!\})`,
+  String.raw`%[sdif]`,
+  String.raw`%\([^)]+\)[sdif]`,
+  String.raw`\$\d+`,
 ];
 
 const DEFAULT_HARDCODED_ATTRIBUTES = [
@@ -23,6 +26,17 @@ const DEFAULT_HARDCODED_ATTRIBUTES = [
   'alt',
   'aria-label',
   'aria-description',
+];
+
+const DEFAULT_HARDCODED_FUNCTIONS = [
+  'alert',
+  'confirm',
+  'toast.success',
+  'toast.error',
+];
+
+const DEFAULT_SOURCE_GLOBS = [
+  'src/**/*.{vue,js,jsx,ts,tsx}',
 ];
 
 async function exists(filePath) {
@@ -102,8 +116,8 @@ function validateConfig(config) {
     throw new Error('Config checks must be an object');
   }
 
-  if ('format' in candidate && !['console', 'json', 'markdown'].includes(candidate.format)) {
-    throw new Error('Config format must be console, json, or markdown');
+  if ('format' in candidate && !['console', 'json', 'markdown', 'sarif'].includes(candidate.format)) {
+    throw new Error('Config format must be console, json, markdown, or sarif');
   }
 
   if ('output' in candidate && typeof candidate.output !== 'string') {
@@ -117,6 +131,15 @@ function validateConfig(config) {
   const hardcoded = /** @type {Record<string, unknown>} */ (candidate.hardcoded || {});
   if ('vueAttributes' in hardcoded && !isStringArray(hardcoded.vueAttributes)) {
     throw new Error('Config hardcoded.vueAttributes must be an array of strings');
+  }
+  if ('jsxAttributes' in hardcoded && !isStringArray(hardcoded.jsxAttributes)) {
+    throw new Error('Config hardcoded.jsxAttributes must be an array of strings');
+  }
+  if ('functions' in hardcoded && !isStringArray(hardcoded.functions)) {
+    throw new Error('Config hardcoded.functions must be an array of strings');
+  }
+  if ('ignoreFiles' in hardcoded && !isStringArray(hardcoded.ignoreFiles)) {
+    throw new Error('Config hardcoded.ignoreFiles must be an array of glob strings');
   }
   validateRuleList(hardcoded.ignoreValues, 'hardcoded.ignoreValues');
   validateRuleList(hardcoded.ignorePatterns, 'hardcoded.ignorePatterns');
@@ -137,15 +160,17 @@ function withDefaults(config) {
     checks: {
       identical: true,
       hardcoded: true,
+      placeholders: true,
       ...(config.checks || {}),
     },
     ...config,
     checks: {
       identical: true,
       hardcoded: true,
+      placeholders: true,
       ...(config.checks || {}),
     },
-    source: config.source || ['src/**/*.vue'],
+    source: config.source || DEFAULT_SOURCE_GLOBS,
     hardcoded: normalizeHardcodedConfig(config.hardcoded || {}),
     placeholderPatterns: normalizePlaceholderPatterns(config.placeholderPatterns || DEFAULT_PLACEHOLDER_PATTERNS),
     ignoreCodeLike: config.ignoreCodeLike ?? true,
@@ -186,6 +211,9 @@ function normalizePlaceholderPatterns(patterns) {
 function normalizeHardcodedConfig(config) {
   return {
     vueAttributes: config.vueAttributes || DEFAULT_HARDCODED_ATTRIBUTES,
+    jsxAttributes: config.jsxAttributes || DEFAULT_HARDCODED_ATTRIBUTES,
+    functions: config.functions || DEFAULT_HARDCODED_FUNCTIONS,
+    ignoreFiles: config.ignoreFiles || [],
     ignoreValues: config.ignoreValues || [],
     ignorePatterns: normalizeRegexRules(config.ignorePatterns || [], 'hardcoded.ignorePatterns'),
   };

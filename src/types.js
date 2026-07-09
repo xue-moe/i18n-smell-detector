@@ -1,6 +1,6 @@
 /**
  * @typedef {'ignored' | 'low' | 'medium' | 'high'} Severity
- * @typedef {'console' | 'json' | 'markdown'} ReportFormat
+ * @typedef {'console' | 'json' | 'markdown' | 'sarif'} ReportFormat
  *
  * @typedef {Object} DetectorConfig
  * @property {string} baseLocale
@@ -9,8 +9,8 @@
  * @property {(string | RegExp)[]=} allowIdenticalValues
  * @property {(string | RegExp)[]=} placeholderPatterns
  * @property {string[]=} source
- * @property {{vueAttributes: string[], ignoreValues: (string | RegExp)[], ignorePatterns: RegExp[]}=} hardcoded
- * @property {{identical: boolean, hardcoded: boolean}=} checks
+ * @property {{vueAttributes: string[], jsxAttributes: string[], functions: string[], ignoreFiles: string[], ignoreValues: (string | RegExp)[], ignorePatterns: RegExp[]}=} hardcoded
+ * @property {{identical: boolean, hardcoded: boolean, placeholders: boolean}=} checks
  * @property {ReportFormat=} format
  * @property {string=} output
  * @property {string=} baseline
@@ -37,6 +37,16 @@
  * @property {Severity} severity
  * @property {string} reason
  * @property {string} kind
+ *
+ * @typedef {Object} PlaceholderIssue
+ * @property {string} key
+ * @property {string} baseLocale
+ * @property {string} targetLocale
+ * @property {string} value
+ * @property {string[]} missing
+ * @property {string[]} extra
+ * @property {Severity} severity
+ * @property {string} reason
  */
 
 export {};

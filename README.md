@@ -2,21 +2,23 @@
 
 [![npm version](https://img.shields.io/npm/v/i18n-smell-detector.svg)](https://www.npmjs.com/package/i18n-smell-detector)
 [![CI](https://github.com/xue-moe/i18n-smell-detector/actions/workflows/ci.yml/badge.svg)](https://github.com/xue-moe/i18n-smell-detector/actions/workflows/ci.yml)
+[![Socket Badge](https://badge.socket.dev/npm/package/i18n-smell-detector)](https://badge.socket.dev/npm/package/i18n-smell-detector)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 Find localization issues that key coverage checks miss.
 
-`i18n-smell-detector` checks localization files for keys whose translated value is identical to the base locale. It can also scan Vue templates for hardcoded user-visible strings.
+`i18n-smell-detector` checks localization files for copied base-locale values and placeholder mismatches. It can also scan Vue, JavaScript, TypeScript, JSX, and TSX source for hardcoded user-visible strings.
 
-Current scope: `check-hardcoded` scans Vue templates only; JavaScript, TypeScript, and JSX strings are not scanned yet. Text classification is rule-based and conservative, so projects with many proper nouns, product codes, or non-English copy should start with `--fail-on none` and tune allowlists before enforcing CI.
+Current scope: text classification is rule-based and conservative, so projects with many proper nouns, product codes, or non-English copy should start with `--fail-on none` and tune allowlists before enforcing CI.
 
 ## Features
 
 - Detect values that are identical to the base locale
-- Detect hardcoded strings in Vue template text and selected attributes
+- Detect missing or extra placeholders across locale values
+- Detect hardcoded strings in Vue templates, JSX/TSX text and attributes, and configured JS/TS function calls
 - Ignore expected matches by key or value
 - Classify findings as `high`, `medium`, `low`, or `ignored`
-- Output results as console text, JSON, or Markdown
+- Output results as console text, JSON, Markdown, or SARIF
 - Fail CI based on a configurable severity level
 
 ## Install
@@ -33,6 +35,7 @@ Run the check:
 npx i18n-smell-detector check --config i18n-smell.config.mjs
 npx i18n-smell-detector check-identical --config i18n-smell.config.mjs
 npx i18n-smell-detector check-hardcoded --config i18n-smell.config.mjs
+npx i18n-smell-detector check-placeholders --config i18n-smell.config.mjs
 ```
 
 Output formats:
@@ -43,6 +46,7 @@ npx i18n-smell-detector check-identical --format json
 npx i18n-smell-detector check-identical --format markdown
 npx i18n-smell-detector check-hardcoded --format json
 npx i18n-smell-detector check --format markdown --output i18n-report.md
+npx i18n-smell-detector check --format sarif --output i18n-smell.sarif
 ```
 
 CLI options:
@@ -50,7 +54,7 @@ CLI options:
 | Option | Description |
 |---|---|
 | `-c, --config <path>` | Use a specific config file. |
-| `--format <format>` | Print `console`, `json`, or `markdown` output. |
+| `--format <format>` | Print `console`, `json`, `markdown`, or `sarif` output. |
 | `--fail-on <level>` | Exit with code `1` for findings at `high`, `medium`, or `low`. Use `none` while tuning. |
 | `--include-ignored` | Include ignored findings in the report. |
 | `--output <path>` | Write the full report to a file and print a short summary. |
@@ -120,10 +124,11 @@ export default {
   baseLocale: 'en',
   checks: {
     identical: true,
-    hardcoded: true
+    hardcoded: true,
+    placeholders: true
   },
   source: [
-    'src/**/*.vue'
+    'src/**/*.{vue,js,jsx,ts,tsx}'
   ],
 
   locales: {
@@ -149,8 +154,8 @@ export default {
   ],
 
   placeholderPatterns: [
-    '\\{[^}]+\\}',
     '\\{\\{[^}]+\\}\\}',
+    '(?<!\\{)\\{[^{}]+\\}(?!\\})',
     '%[sdif]',
     '%\\([^)]+\\)[sdif]',
     '\\$\\d+'
@@ -164,6 +169,22 @@ export default {
       'alt',
       'aria-label',
       'aria-description'
+    ],
+    jsxAttributes: [
+      'placeholder',
+      'title',
+      'alt',
+      'aria-label',
+      'aria-description'
+    ],
+    functions: [
+      'toast.success',
+      'toast.error',
+      'alert',
+      'confirm'
+    ],
+    ignoreFiles: [
+      'src/generated/**'
     ],
     ignoreValues: [
       'OK',
@@ -188,14 +209,17 @@ export default {
 | Option | Type | Default | Description |
 |---|---|---:|---|
 | `baseLocale` | `string` | `'en'` | Locale used as the comparison source. It must also be listed in `locales`. |
-| `checks` | `{ identical?: boolean, hardcoded?: boolean }` | both enabled | Checks run by the combined `check` command. Existing single-check commands ignore this setting. |
-| `source` | `string[]` | `['src/**/*.vue']` | Source globs used by `check-hardcoded`. `node_modules` is ignored. |
+| `checks` | `{ identical?: boolean, hardcoded?: boolean, placeholders?: boolean }` | all enabled | Checks run by the combined `check` command. Existing single-check commands ignore this setting. |
+| `source` | `string[]` | `['src/**/*.{vue,js,jsx,ts,tsx}']` | Source globs used by `check-hardcoded`. `node_modules` and `hardcoded.ignoreFiles` are ignored. |
 | `locales` | `Record<string, string>` | `{}` | Map of locale codes to JSON locale file paths. Relative paths are resolved from the config file directory. |
 | `allowIdenticalKeys` | `(string \| RegExp)[]` | `[]` | Key rules that are allowed to match the base locale. String rules support `*` wildcards, for example `brand.*`. `RegExp` rules are tested against the flattened key. |
 | `allowIdenticalValues` | `(string \| RegExp)[]` | `[]` | Value rules that are allowed to match the base locale. String rules are exact matches, for example `OK`, `API`, or `GET`. `RegExp` rules are tested against the full value. |
-| `placeholderPatterns` | `(string \| RegExp)[]` | `{...}` and `{{...}}` patterns | Placeholder patterns ignored when the whole value is only placeholders and whitespace. String entries must be valid regular expression sources. |
+| `placeholderPatterns` | `(string \| RegExp)[]` | common brace, printf, named printf, and `$1` patterns | Placeholder patterns used by `check-identical` placeholder-only ignores and `check-placeholders` mismatch detection. String entries must be valid regular expression sources. |
 | `ignoreCodeLike` | `boolean` | `true` | Ignore built-in code-like values such as paths, colors, acronyms, and identifiers. Set to `false` to report them. |
 | `hardcoded.vueAttributes` | `string[]` | `placeholder`, `title`, `alt`, `aria-label`, `aria-description` | Static Vue attributes checked by `check-hardcoded`. Dynamic bindings such as `:placeholder` are ignored. |
+| `hardcoded.jsxAttributes` | `string[]` | `placeholder`, `title`, `alt`, `aria-label`, `aria-description` | Static JSX/TSX attributes checked by `check-hardcoded`. Expression attributes are ignored unless they contain a static string literal. |
+| `hardcoded.functions` | `string[]` | `alert`, `confirm`, `toast.success`, `toast.error` | JS/TS call expressions whose static string arguments are checked by `check-hardcoded`. |
+| `hardcoded.ignoreFiles` | `string[]` | `[]` | Glob patterns excluded from `check-hardcoded`, useful for generated files or vendored code. |
 | `hardcoded.ignoreValues` | `(string \| RegExp)[]` | `[]` | Exact values or regular expressions ignored by `check-hardcoded`. |
 | `hardcoded.ignorePatterns` | `(string \| RegExp)[]` | `[]` | Regular expression patterns ignored by `check-hardcoded`. String entries are compiled as regular expressions. |
 | `failOn` | `'high' \| 'medium' \| 'low' \| 'none'` | `'high'` | Lowest severity that makes the CLI exit with code `1`. Use `none` to report without failing. |
@@ -203,7 +227,7 @@ export default {
 | `ignoreCase` | `boolean` | `false` | Compare values case-insensitively when set to `true`. |
 | `ignoreSameLanguageFamily` | `boolean` | `true` | Ignore regional variants that share the same language family, such as `en` and `en-GB`. Set to `false` to check regional variants too. |
 | `includeIgnored` | `boolean` | `false` | Include ignored findings in reports. Can also be enabled with `--include-ignored`. |
-| `format` | `'console' \| 'json' \| 'markdown'` | `'console'` | Default report format. CLI `--format` takes precedence. |
+| `format` | `'console' \| 'json' \| 'markdown' \| 'sarif'` | `'console'` | Default report format. CLI `--format` takes precedence. |
 | `output` | `string` | unset | Report file path. CLI `--output` takes precedence. |
 | `baseline` | `string` | unset | Baseline file path used by `--baseline` or `--update-baseline`. |
 
@@ -263,12 +287,53 @@ Summary counts include all findings, including ignored findings that may be omit
 | `value` | `string` | Identical target value. |
 | `severity` | `'high' \| 'medium' \| 'low' \| 'ignored'` | Classification assigned by the detection rules. |
 | `reason` | `string` | Short explanation for the classification. |
+| `id` | `string` | Stable issue identifier used by JSON, SARIF, and baselines. |
 
 Ignored issues are omitted by default. Pass `--include-ignored` to include them in JSON, console, or Markdown output.
 
+## Placeholder output
+
+`check-placeholders` reports target locale values whose placeholder set differs from the base locale:
+
+```txt
+i18n-smell-detector: placeholder mismatches
+high=1 medium=0 low=0 ignored=0
+
+HIGH zh.user.greeting
+  value: "你好"
+  missing: {name}
+  reason: missing placeholder
+```
+
+JSON output includes `missing` and `extra` arrays:
+
+```json
+{
+  "summary": {
+    "high": 1,
+    "medium": 0,
+    "low": 0,
+    "ignored": 0
+  },
+  "issues": [
+    {
+      "key": "user.greeting",
+      "baseLocale": "en",
+      "targetLocale": "zh",
+      "value": "你好",
+      "missing": ["{name}"],
+      "extra": [],
+      "severity": "high",
+      "reason": "missing placeholder",
+      "id": "placeholders:zh:user.greeting"
+    }
+  ]
+}
+```
+
 ## Hardcoded string output
 
-`check-hardcoded` reports Vue template text and static user-visible attributes:
+`check-hardcoded` reports Vue template text, static Vue attributes, JSX/TSX text and attributes, and configured JS/TS function call strings:
 
 ```txt
 i18n-smell-detector: hardcoded strings
@@ -301,7 +366,8 @@ JSON output includes source locations:
       "value": "Profile settings",
       "severity": "high",
       "reason": "static template text",
-      "kind": "vue-text"
+      "kind": "vue-text",
+      "id": "hardcoded:src/components/UserPanel.vue:12:15:Profile settings"
     }
   ]
 }
@@ -321,7 +387,8 @@ Disable checks during gradual rollout:
 export default {
   checks: {
     identical: true,
-    hardcoded: false
+    hardcoded: false,
+    placeholders: true
   }
 };
 ```
@@ -342,6 +409,12 @@ Combined JSON output groups counts by check:
       "medium": 2,
       "low": 0,
       "ignored": 3
+    },
+    "placeholders": {
+      "high": 1,
+      "medium": 0,
+      "low": 0,
+      "ignored": 0
     }
   },
   "issues": []
@@ -355,9 +428,12 @@ Use `--output` to write the full report to a file. The CLI prints a short summar
 ```bash
 npx i18n-smell-detector check --format markdown --output reports/i18n-report.md
 npx i18n-smell-detector check --format json --output reports/i18n-report.json
+npx i18n-smell-detector check --format sarif --output reports/i18n-smell.sarif
 ```
 
 Markdown output for `check` includes a summary table and one section per check, which makes it suitable for CI artifacts.
+
+SARIF output uses stable issue ids as `partialFingerprints.stableId`, so it can be uploaded to code scanning tools that understand SARIF 2.1.0.
 
 ## Gradual adoption
 
@@ -416,10 +492,11 @@ export default {
     /^HTTP\/\d(\.\d)?$/
   ],
   placeholderPatterns: [
-    '\\{[^}]+\\}',
     '\\{\\{[^}]+\\}\\}',
+    '(?<!\\{)\\{[^{}]+\\}(?!\\})',
     '%[sdif]',
-    '%\\([^)]+\\)[sdif]'
+    '%\\([^)]+\\)[sdif]',
+    '\\$\\d+'
   ],
   failOn: 'high'
 };
@@ -435,13 +512,16 @@ Useful tuning patterns:
 - Set `ignoreSameLanguageFamily: false` if you want to check regional variants such as `en-GB`, `en-AU`, or `pt-BR`.
 - Set `failOn: 'none'` while tuning a new project, then raise it to `high` or `medium` once the allowlist is stable.
 - Pass `--include-ignored` when reviewing why a value was ignored.
-- Use `source` to choose Vue files for `check-hardcoded`.
+- Use `source` to choose Vue, JS, TS, JSX, and TSX files for `check-hardcoded`.
 - Tune `hardcoded.vueAttributes` if your project uses additional static attributes for user-visible text.
+- Tune `hardcoded.jsxAttributes` if your React components use additional static attributes for user-visible text.
+- Tune `hardcoded.functions` to check project-specific notification, modal, or validation helpers.
+- Use `hardcoded.ignoreFiles` for generated source files.
 - Use `hardcoded.ignoreValues` and `hardcoded.ignorePatterns` for intentional literals such as `OK`, version labels, or product codes.
 
 ## Limitations
 
-`check-hardcoded` currently scans Vue templates only. JavaScript, TypeScript, and JSX string detection are not included yet. Classification uses heuristic rules rather than full language detection.
+`check-hardcoded` scans configured static strings in Vue, JS, TS, JSX, and TSX. It does not evaluate runtime expressions or follow variables. Classification uses heuristic rules rather than full language detection.
 
 ## Notes
 

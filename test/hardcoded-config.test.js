@@ -13,7 +13,7 @@ test('loadConfig applies hardcoded defaults', async () => {
     await writeFile(configPath, 'export default {};');
     const config = await loadConfig(configPath);
 
-    assert.deepEqual(config.source, ['src/**/*.vue']);
+    assert.deepEqual(config.source, ['src/**/*.{vue,js,jsx,ts,tsx}']);
     assert.deepEqual(config.hardcoded.vueAttributes, [
       'placeholder',
       'title',
@@ -21,6 +21,14 @@ test('loadConfig applies hardcoded defaults', async () => {
       'aria-label',
       'aria-description',
     ]);
+    assert.deepEqual(config.hardcoded.jsxAttributes, config.hardcoded.vueAttributes);
+    assert.deepEqual(config.hardcoded.functions, [
+      'alert',
+      'confirm',
+      'toast.success',
+      'toast.error',
+    ]);
+    assert.deepEqual(config.hardcoded.ignoreFiles, []);
     assert.deepEqual(config.hardcoded.ignoreValues, []);
     assert.deepEqual(config.hardcoded.ignorePatterns, []);
   } finally {

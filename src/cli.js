@@ -13,11 +13,12 @@ i18n-smell-detector
 Usage:
   i18n-smell-detector check-identical [options]
   i18n-smell-detector check-hardcoded [options]
+  i18n-smell-detector check-placeholders [options]
   i18n-smell-detector check [options]
 
 Options:
   -c, --config <path>       Config file path
-  --format <format>         console | json | markdown  (default: console)
+  --format <format>         console | json | markdown | sarif  (default: console)
   --fail-on <level>         high | medium | low | none (default: config.failOn or high)
   --output <path>           Write the full report to a file
   --baseline <path>         Read a baseline file
@@ -28,6 +29,7 @@ Options:
 Example:
   i18n-smell-detector check-identical -c i18n-smell.config.mjs --format markdown
   i18n-smell-detector check-hardcoded -c i18n-smell.config.mjs --format json
+  i18n-smell-detector check-placeholders -c i18n-smell.config.mjs --format json
 `;
 
 function parseArgs(argv) {
@@ -43,7 +45,7 @@ function parseArgs(argv) {
     } else if (arg === '-c' || arg === '--config') {
       options.configPath = args[++index];
     } else if (arg === '--format') {
-      options.format = readChoice(args[++index], ['console', 'json', 'markdown'], 'format');
+      options.format = readChoice(args[++index], ['console', 'json', 'markdown', 'sarif'], 'format');
     } else if (arg === '--fail-on') {
       options.failOn = readChoice(args[++index], ['none', 'low', 'medium', 'high'], 'fail-on level');
     } else if (arg === '--output') {
@@ -77,7 +79,7 @@ export async function runCli(argv) {
     return;
   }
 
-  if (!['check-identical', 'check-hardcoded', 'check'].includes(options.command)) {
+  if (!['check-identical', 'check-hardcoded', 'check-placeholders', 'check'].includes(options.command)) {
     throw new Error(`Unknown command: ${options.command}\n${HELP}`);
   }
 
@@ -131,6 +133,7 @@ export async function runCli(argv) {
 function commandChecks(command, config) {
   if (command === 'check-identical') return ['identical'];
   if (command === 'check-hardcoded') return ['hardcoded'];
+  if (command === 'check-placeholders') return ['placeholders'];
   return enabledChecks(config);
 }
 
@@ -140,6 +143,7 @@ function renderSingleReport(result, options) {
     title: result.title,
     heading: result.heading,
     emptyMessage: result.emptyMessage,
+    check: result.check,
   });
 }
 

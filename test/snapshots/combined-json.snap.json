@@ -11,6 +11,12 @@
       "medium": 2,
       "low": 0,
       "ignored": 1
+    },
+    "placeholders": {
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "ignored": 0
     }
   },
   "issues": [
@@ -21,7 +27,8 @@
       "targetLocale": "zh",
       "value": "Welcome back",
       "severity": "high",
-      "reason": "copied English phrase"
+      "reason": "copied English phrase",
+      "id": "identical:zh:home.title"
     },
     {
       "check": "hardcoded",
@@ -31,7 +38,8 @@
       "value": "Account settings",
       "severity": "high",
       "reason": "static template text",
-      "kind": "vue-text"
+      "kind": "vue-text",
+      "id": "hardcoded:src/components/UserPanel.vue:3:9:Account settings"
     },
     {
       "check": "hardcoded",
@@ -41,7 +49,8 @@
       "value": "Search",
       "severity": "medium",
       "reason": "static placeholder attribute",
-      "kind": "vue-attribute:placeholder"
+      "kind": "vue-attribute:placeholder",
+      "id": "hardcoded:src/components/UserPanel.vue:4:24:Search"
     },
     {
       "check": "hardcoded",
@@ -51,7 +60,8 @@
       "value": "Save",
       "severity": "medium",
       "reason": "static template text",
-      "kind": "vue-text"
+      "kind": "vue-text",
+      "id": "hardcoded:src/components/UserPanel.vue:5:13:Save"
     }
   ]
 }
