@@ -1,3 +1,10 @@
+# [0.5.0](https://github.com/xue-moe/i18n-smell-detector/compare/v0.4.2...v0.5.0) (2026-07-09)
+
+
+### Features
+
+* **check:** add placeholders sarif and source scanning ([d9b4340](https://github.com/xue-moe/i18n-smell-detector/commit/d9b4340be28b656afc395fdc7ba69f85e259fbea))
+
 ## [0.4.2](https://github.com/xue-moe/i18n-smell-detector/compare/v0.4.1...v0.4.2) (2026-07-08)
 
 
