@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { access, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Command, InvalidArgumentError } from 'commander';
 import { applyBaseline, loadBaseline, writeBaseline } from './baseline.js';
@@ -17,6 +17,7 @@ Usage:
   i18n-smell-detector check-hardcoded [options]
   i18n-smell-detector check-placeholders [options]
   i18n-smell-detector check [options]
+  i18n-smell-detector init [options]
 
 Options:
   -c, --config <path>       Config file path
@@ -26,12 +27,29 @@ Options:
   --baseline <path>         Read a baseline file
   --update-baseline         Write the current issues to the baseline file
   --include-ignored         Print ignored matches as well
+  --force                   Overwrite an existing config file with init
   -h, --help                Show help
 
 Example:
   i18n-smell-detector check-identical -c i18n-smell.config.mjs --format markdown
   i18n-smell-detector check-hardcoded -c i18n-smell.config.mjs --format json
   i18n-smell-detector check-placeholders -c i18n-smell.config.mjs --format json
+  i18n-smell-detector init
+`;
+
+const DEFAULT_CONFIG_PATH = 'i18n-smell.config.mjs';
+
+const CONFIG_TEMPLATE = `export default {
+  baseLocale: 'en',
+  locales: {
+    en: './src/locales/en.json',
+    zh: './src/locales/zh.json'
+  },
+  source: [
+    'src/**/*.{vue,js,jsx,ts,tsx}'
+  ],
+  failOn: 'none'
+};
 `;
 
 function parseArgs(argv) {
@@ -39,7 +57,7 @@ function parseArgs(argv) {
     .name('i18n-smell-detector')
     .usage('[command] [options]')
     .description('Find localization issues that key coverage checks miss.')
-    .argument('[command]', 'check-identical | check-hardcoded | check-placeholders | check', 'check-identical')
+    .argument('[command]', 'init | check-identical | check-hardcoded | check-placeholders | check', 'check-identical')
     .option('-c, --config <path>', 'Config file path')
     .option('--format <format>', 'console | json | markdown | sarif', readFormat)
     .option('--fail-on <level>', 'high | medium | low | none', readFailOn)
@@ -47,12 +65,14 @@ function parseArgs(argv) {
     .option('--baseline <path>', 'Read a baseline file')
     .option('--update-baseline', 'Write the current issues to the baseline file', false)
     .option('--include-ignored', 'Print ignored matches as well', false)
+    .option('--force', 'Overwrite an existing config file with init', false)
     .addHelpText('after', `
 
 Example:
   i18n-smell-detector check-identical -c i18n-smell.config.mjs --format markdown
   i18n-smell-detector check-hardcoded -c i18n-smell.config.mjs --format json
-  i18n-smell-detector check-placeholders -c i18n-smell.config.mjs --format json`)
+  i18n-smell-detector check-placeholders -c i18n-smell.config.mjs --format json
+  i18n-smell-detector init`)
     .exitOverride()
     .configureOutput({
       writeOut: () => {},
@@ -68,7 +88,7 @@ Example:
   }
 
   const [command] = program.args;
-  if (!['check-identical', 'check-hardcoded', 'check-placeholders', 'check'].includes(command)) {
+  if (!['init', 'check-identical', 'check-hardcoded', 'check-placeholders', 'check'].includes(command)) {
     throw appError(`Unknown command: ${command}\n${HELP}`, 'CLI_USAGE');
   }
 
@@ -81,6 +101,7 @@ Example:
     baseline: program.opts().baseline,
     updateBaseline: program.opts().updateBaseline,
     includeIgnored: program.opts().includeIgnored,
+    force: program.opts().force,
     help: false,
   };
 }
@@ -113,6 +134,11 @@ export async function runCli(argv) {
 
   if (options.help || options.command === 'help') {
     console.log(HELP.trim());
+    return;
+  }
+
+  if (options.command === 'init') {
+    await writeDefaultConfig(options.configPath || DEFAULT_CONFIG_PATH, process.cwd(), options.force);
     return;
   }
 
@@ -198,6 +224,27 @@ async function writeOutput(filePath, report) {
     await writeFile(filePath, report);
   } catch (error) {
     throw appError(`Failed to write report file: ${filePath}\nReason: ${error.message}`, 'OUTPUT_WRITE_FAILED');
+  }
+}
+
+async function writeDefaultConfig(configPath, cwd, force) {
+  const target = path.isAbsolute(configPath) ? configPath : path.resolve(cwd, configPath);
+
+  if (!force && await exists(target)) {
+    throw appError(`Config file already exists: ${target}\nUse --force to overwrite it.`, 'CONFIG_EXISTS');
+  }
+
+  await mkdir(path.dirname(target), { recursive: true });
+  await writeFile(target, CONFIG_TEMPLATE);
+  console.log(`Created ${path.relative(cwd, target) || target}`);
+}
+
+async function exists(filePath) {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
   }
 }
 

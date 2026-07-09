@@ -27,11 +27,50 @@ Current scope: text classification is rule-based and conservative, so projects w
 npm install -D i18n-smell-detector
 ```
 
+## Quick Start
+
+Installing the package only adds the CLI. Generate a starter config in your project root:
+
+```bash
+npx i18n-smell-detector init
+```
+
+This creates `i18n-smell.config.mjs`:
+
+```js
+export default {
+  baseLocale: 'en',
+  locales: {
+    en: './src/locales/en.json',
+    zh: './src/locales/zh.json'
+  },
+  source: [
+    'src/**/*.{vue,js,jsx,ts,tsx}'
+  ]
+};
+```
+
+Adjust `locales` and `source` to match your project, then run:
+
+```bash
+npx i18n-smell-detector check --config i18n-smell.config.mjs --fail-on none
+```
+
+If your config file lives somewhere else, pass that path:
+
+```bash
+npx i18n-smell-detector init --config ./config/i18n-smell.config.mjs
+npx i18n-smell-detector check --config ./config/i18n-smell.config.mjs
+```
+
+`init` refuses to overwrite an existing config. Use `--force` only when you intentionally want to replace it. Locale and source paths inside the config are resolved relative to the config file.
+
 ## Usage
 
 Run the check:
 
 ```bash
+npx i18n-smell-detector init
 npx i18n-smell-detector check --config i18n-smell.config.mjs
 npx i18n-smell-detector check-identical --config i18n-smell.config.mjs
 npx i18n-smell-detector check-hardcoded --config i18n-smell.config.mjs
@@ -117,7 +156,7 @@ jobs:
 
 ## Configuration
 
-Create `i18n-smell.config.mjs`:
+Create `i18n-smell.config.mjs` and adjust `locales` and `source` to match your project:
 
 ```js
 export default {
