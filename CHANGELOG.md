@@ -1,3 +1,10 @@
+# [0.6.0](https://github.com/xue-moe/i18n-smell-detector/compare/v0.5.2...v0.6.0) (2026-07-09)
+
+
+### Features
+
+* **cli:** add config init command ([10333db](https://github.com/xue-moe/i18n-smell-detector/commit/10333dbd8905f6d0e5a7023423dae164c3d81921))
+
 ## [0.5.2](https://github.com/xue-moe/i18n-smell-detector/compare/v0.5.1...v0.5.2) (2026-07-09)
 
 
