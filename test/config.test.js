@@ -67,3 +67,40 @@ test('loadConfig reports invalid placeholder patterns clearly', async () => {
     await rm(tempDir, { recursive: true, force: true });
   }
 });
+
+test('loadConfig rejects invalid failOn and boolean options', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-config-'));
+  const failOnConfigPath = path.join(tempDir, 'invalid-fail-on.config.mjs');
+  const booleanConfigPath = path.join(tempDir, 'invalid-boolean.config.mjs');
+
+  try {
+    await writeFile(failOnConfigPath, "export default { failOn: 'critical' };");
+    await assert.rejects(
+      () => loadConfig(failOnConfigPath),
+      /Config failOn must be high, medium, low, or none/
+    );
+
+    await writeFile(booleanConfigPath, "export default { includeIgnored: 'yes' };");
+    await assert.rejects(
+      () => loadConfig(booleanConfigPath),
+      /Config includeIgnored must be a boolean/
+    );
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('loadConfig rejects non-boolean check toggles', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-config-'));
+  const configPath = path.join(tempDir, 'i18n-smell.config.mjs');
+
+  try {
+    await writeFile(configPath, "export default { checks: { hardcoded: 'no' } };");
+    await assert.rejects(
+      () => loadConfig(configPath),
+      /Config checks\.hardcoded must be a boolean/
+    );
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});

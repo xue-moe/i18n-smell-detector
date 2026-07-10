@@ -40,6 +40,16 @@ const DEFAULT_SOURCE_GLOBS = [
   'src/**/*.{vue,js,jsx,ts,tsx}',
 ];
 
+const FAIL_ON_LEVELS = ['none', 'low', 'medium', 'high'];
+const BOOLEAN_OPTIONS = [
+  'ignoreSameLanguageFamily',
+  'trimWhitespace',
+  'ignoreCase',
+  'includeIgnored',
+  'ignoreCodeLike',
+];
+const CHECK_NAMES = ['identical', 'hardcoded', 'placeholders'];
+
 async function exists(filePath) {
   try {
     await access(filePath);
@@ -117,8 +127,25 @@ function validateConfig(config) {
     throw appError('Config checks must be an object', 'CONFIG_INVALID');
   }
 
+  const checks = /** @type {Record<string, unknown>} */ (candidate.checks || {});
+  for (const check of CHECK_NAMES) {
+    if (check in checks && typeof checks[check] !== 'boolean') {
+      throw appError(`Config checks.${check} must be a boolean`, 'CONFIG_INVALID');
+    }
+  }
+
   if ('format' in candidate && !['console', 'json', 'markdown', 'sarif'].includes(candidate.format)) {
     throw appError('Config format must be console, json, markdown, or sarif', 'CONFIG_INVALID');
+  }
+
+  if ('failOn' in candidate && !FAIL_ON_LEVELS.includes(candidate.failOn)) {
+    throw appError('Config failOn must be high, medium, low, or none', 'CONFIG_INVALID');
+  }
+
+  for (const option of BOOLEAN_OPTIONS) {
+    if (option in candidate && typeof candidate[option] !== 'boolean') {
+      throw appError(`Config ${option} must be a boolean`, 'CONFIG_INVALID');
+    }
   }
 
   if ('output' in candidate && typeof candidate.output !== 'string') {

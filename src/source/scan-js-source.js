@@ -36,6 +36,10 @@ function makeIssue({ file, loc, value, kind, baseReason, config }) {
 
 export async function scanJsSource(file, config) {
   const source = await readFile(file, 'utf8');
+  return scanJsText(source, { file, config });
+}
+
+export function scanJsText(source, { file, config, lineOffset = 0 }) {
   let ast;
 
   try {
@@ -60,7 +64,7 @@ export async function scanJsSource(file, config) {
 
         const issue = makeIssue({
           file,
-          loc: argument.loc,
+          loc: offsetLoc(argument.loc, lineOffset),
           value,
           kind: `js-call:${calleeName(node.callee)}`,
           baseReason: `static string passed to ${calleeName(node.callee)}`,
@@ -74,7 +78,7 @@ export async function scanJsSource(file, config) {
     if (node.type === 'JSXText') {
       const issue = makeIssue({
         file,
-        loc: node.loc,
+        loc: offsetLoc(node.loc, lineOffset),
         value: node.value,
         kind: 'jsx-text',
         baseReason: 'static JSX text',
@@ -90,7 +94,7 @@ export async function scanJsSource(file, config) {
 
       const issue = makeIssue({
         file,
-        loc: node.value.loc,
+        loc: offsetLoc(node.value.loc, lineOffset),
         value,
         kind: `jsx-attribute:${jsxName(node.name)}`,
         baseReason: `static ${jsxName(node.name)} attribute`,
@@ -101,6 +105,17 @@ export async function scanJsSource(file, config) {
   });
 
   return issues;
+}
+
+function offsetLoc(loc, lineOffset) {
+  if (!lineOffset) return loc;
+  return {
+    ...loc,
+    start: {
+      ...loc.start,
+      line: loc.start.line + lineOffset,
+    },
+  };
 }
 
 function walk(node, visitor) {

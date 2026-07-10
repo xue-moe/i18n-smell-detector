@@ -35,22 +35,33 @@ Installing the package only adds the CLI. Generate a starter config in your proj
 npx i18n-smell-detector init
 ```
 
-This creates `i18n-smell.config.mjs`:
+This creates `i18n-smell.config.mjs`. A typical config looks like this:
 
 ```js
 export default {
   baseLocale: 'en',
   locales: {
     en: './src/locales/en.json',
-    zh: './src/locales/zh.json'
+    zh: './src/locales/zh.json',
+    'zh-Hans': './src/locales/zh-Hans.json'
   },
   source: [
     'src/**/*.{vue,js,jsx,ts,tsx}'
-  ]
+  ],
+  failOn: 'none'
 };
 ```
 
-Adjust `locales` and `source` to match your project, then run:
+When possible, `init` discovers locale JSON files in common project directories and writes them into `locales` automatically. It checks the first matching directory from this list:
+
+- `src/locales`
+- `src/i18n`
+- `locales`
+- `i18n`
+
+For example, if `src/locales/en.json` and `src/locales/ja.json` exist, `init` writes both entries and uses `en` as `baseLocale`. If no locale JSON files are found in those directories, it falls back to a starter `en` and `zh` config. Locale keys that contain `-`, such as `'zh-Hans'`, must be quoted as shown above.
+
+Adjust `locales` and `source` if needed, then run:
 
 ```bash
 npx i18n-smell-detector check --config i18n-smell.config.mjs --fail-on none
@@ -63,7 +74,7 @@ npx i18n-smell-detector init --config ./config/i18n-smell.config.mjs
 npx i18n-smell-detector check --config ./config/i18n-smell.config.mjs
 ```
 
-`init` refuses to overwrite an existing config. Use `--force` only when you intentionally want to replace it. Locale and source paths inside the config are resolved relative to the config file.
+`init` refuses to overwrite an existing config. Use `--force` only when you intentionally want to replace it. Locale and source paths inside the config are resolved relative to the config file. Locale discovery is intentionally conservative: it only checks direct `.json` files in the project directories listed above, and it does not scan unrelated JSON files elsewhere.
 
 ## Usage
 
@@ -173,6 +184,7 @@ export default {
   locales: {
     en: './src/locales/en.json',
     zh: './src/locales/zh.json',
+    'zh-Hans': './src/locales/zh-Hans.json',
     ja: './src/locales/ja.json'
   },
 
@@ -517,7 +529,8 @@ export default {
   baseLocale: 'en',
   locales: {
     en: './src/locales/en.json',
-    zh: './src/locales/zh.json'
+    zh: './src/locales/zh.json',
+    'zh-Hans': './src/locales/zh-Hans.json'
   },
   allowIdenticalKeys: [
     'brand.*',

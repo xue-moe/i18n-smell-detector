@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { parse } from '@vue/compiler-sfc';
+import { scanJsText } from './scan-js-source.js';
 import { scanVueTemplate } from './scan-vue-template.js';
 
 function lineOffsetBefore(source, offset) {
@@ -15,12 +16,25 @@ export async function scanVueSfc(file, config) {
     throw new Error(`Malformed Vue file ${file}: ${error.message || String(error)}`);
   }
 
-  const template = result.descriptor.template;
-  if (!template) return [];
+  const issues = [];
+  const { template, script, scriptSetup } = result.descriptor;
 
-  return scanVueTemplate(template.content, {
-    file,
-    lineOffset: lineOffsetBefore(source, template.loc.start.offset),
-    config,
-  });
+  if (template) {
+    issues.push(...scanVueTemplate(template.content, {
+      file,
+      lineOffset: lineOffsetBefore(source, template.loc.start.offset),
+      config,
+    }));
+  }
+
+  for (const block of [script, scriptSetup]) {
+    if (!block) continue;
+    issues.push(...scanJsText(block.content, {
+      file,
+      lineOffset: lineOffsetBefore(source, block.loc.start.offset),
+      config,
+    }));
+  }
+
+  return issues;
 }

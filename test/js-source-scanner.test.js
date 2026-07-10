@@ -63,6 +63,44 @@ test('checkHardcodedStrings detects JSX text and static attributes', async () =>
   }
 });
 
+test('checkHardcodedStrings detects configured function calls in Vue script blocks', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-vue-script-'));
+
+  try {
+    await mkdir(path.join(tempDir, 'src'), { recursive: true });
+    await writeFile(path.join(tempDir, 'src/UserPanel.vue'), `
+      <template><button>Save</button></template>
+      <script>
+      export default {
+        mounted() {
+          alert('Invalid input');
+        }
+      };
+      </script>
+      <script setup lang="ts">
+      toast.success('Saved changes');
+      </script>
+    `);
+    const configPath = path.join(tempDir, 'i18n-smell.config.mjs');
+    await writeFile(configPath, `
+      export default {
+        source: ['src/**/*.vue'],
+        hardcoded: {
+          functions: ['toast.success', 'alert']
+        }
+      };
+    `);
+    const config = await loadConfig(configPath);
+    const issues = await checkHardcodedStrings(config, tempDir);
+
+    assert.ok(issues.some((issue) => issue.kind === 'vue-text' && issue.value === 'Save'));
+    assert.ok(issues.some((issue) => issue.kind === 'js-call:alert' && issue.value === 'Invalid input'));
+    assert.ok(issues.some((issue) => issue.kind === 'js-call:toast.success' && issue.value === 'Saved changes'));
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
 test('checkHardcodedStrings respects hardcoded.ignoreFiles', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-ignore-files-'));
 

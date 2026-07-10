@@ -1,4 +1,4 @@
-import { access, mkdir, writeFile } from 'node:fs/promises';
+import { access, mkdir, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Command, InvalidArgumentError } from 'commander';
 import { applyBaseline, loadBaseline, writeBaseline } from './baseline.js';
@@ -39,7 +39,7 @@ Example:
 
 const DEFAULT_CONFIG_PATH = 'i18n-smell.config.mjs';
 
-const CONFIG_TEMPLATE = `export default {
+const DEFAULT_CONFIG_TEMPLATE = `export default {
   baseLocale: 'en',
   locales: {
     en: './src/locales/en.json',
@@ -51,6 +51,13 @@ const CONFIG_TEMPLATE = `export default {
   failOn: 'none'
 };
 `;
+
+const LOCALE_DIR_CANDIDATES = [
+  'src/locales',
+  'src/i18n',
+  'locales',
+  'i18n',
+];
 
 function parseArgs(argv) {
   const program = new Command()
@@ -88,7 +95,7 @@ Example:
   }
 
   const [command] = program.args;
-  if (!['init', 'check-identical', 'check-hardcoded', 'check-placeholders', 'check'].includes(command)) {
+  if (!['help', 'init', 'check-identical', 'check-hardcoded', 'check-placeholders', 'check'].includes(command)) {
     throw appError(`Unknown command: ${command}\n${HELP}`, 'CLI_USAGE');
   }
 
@@ -235,7 +242,7 @@ async function writeDefaultConfig(configPath, cwd, force) {
   }
 
   await mkdir(path.dirname(target), { recursive: true });
-  await writeFile(target, CONFIG_TEMPLATE);
+  await writeFile(target, await createConfigTemplate(path.dirname(target)));
   console.log(`Created ${path.relative(cwd, target) || target}`);
 }
 
@@ -254,4 +261,61 @@ function renderWriteSummary(results, output) {
     .map(([check, item]) => `${check}: high=${item.high} medium=${item.medium} low=${item.low} ignored=${item.ignored}`)
     .join('; ');
   return `Report written to ${output}\n${counts}`;
+}
+
+async function createConfigTemplate(baseDir) {
+  const locales = await discoverLocaleFiles(baseDir);
+  if (locales.length === 0) return DEFAULT_CONFIG_TEMPLATE;
+
+  const baseLocale = locales.some((locale) => locale.name === 'en') ? 'en' : locales[0].name;
+  const localeLines = locales.map((locale, index) => {
+    const suffix = index === locales.length - 1 ? '' : ',';
+    return `    ${quoteProperty(locale.name)}: '${locale.path}'${suffix}`;
+  });
+
+  return `export default {
+  baseLocale: '${baseLocale}',
+  locales: {
+${localeLines.join('\n')}
+  },
+  source: [
+    'src/**/*.{vue,js,jsx,ts,tsx}'
+  ],
+  failOn: 'none'
+};
+`;
+}
+
+async function discoverLocaleFiles(baseDir) {
+  for (const dir of LOCALE_DIR_CANDIDATES) {
+    const absoluteDir = path.resolve(baseDir, dir);
+    let entries;
+    try {
+      entries = await readdir(absoluteDir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    const locales = entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+      .map((entry) => {
+        const localeName = entry.name.slice(0, -'.json'.length);
+        const relativePath = toConfigPath(path.relative(baseDir, path.join(absoluteDir, entry.name)));
+        return { name: localeName, path: relativePath };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    if (locales.length > 0) return locales;
+  }
+
+  return [];
+}
+
+function toConfigPath(relativePath) {
+  const normalized = relativePath.split(path.sep).join('/');
+  return normalized.startsWith('.') ? normalized : `./${normalized}`;
+}
+
+function quoteProperty(name) {
+  return /^[A-Za-z_$][\w$]*$/.test(name) ? name : JSON.stringify(name);
 }

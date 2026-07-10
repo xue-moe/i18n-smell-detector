@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -30,6 +30,14 @@ test('CLI rejects unknown options clearly', () => {
 
   assert.equal(result.status, 2);
   assert.match(result.stderr, /Unknown option: --wat/);
+});
+
+test('help command prints usage successfully', () => {
+  const result = run(['help']);
+
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /i18n-smell-detector init/);
+  assert.equal(result.stderr, '');
 });
 
 test('init creates a starter config without overwriting existing files', async () => {
@@ -64,6 +72,29 @@ test('init creates a starter config without overwriting existing files', async (
 
     assert.equal(forced.status, 0, forced.stderr);
     assert.match(await readFile(path.join(tempDir, 'i18n-smell.config.mjs'), 'utf8'), /source:/);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('init discovers locale JSON files in common project directories', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-init-locales-'));
+
+  try {
+    await mkdir(path.join(tempDir, 'src/locales'), { recursive: true });
+    await writeFile(path.join(tempDir, 'src/locales/en.json'), '{}');
+    await writeFile(path.join(tempDir, 'src/locales/ja.json'), '{}');
+
+    const result = spawnSync(process.execPath, [bin, 'init'], {
+      cwd: tempDir,
+      encoding: 'utf8',
+    });
+
+    assert.equal(result.status, 0, result.stderr);
+    const config = await readFile(path.join(tempDir, 'i18n-smell.config.mjs'), 'utf8');
+    assert.match(config, /baseLocale: 'en'/);
+    assert.match(config, /en: '.\/src\/locales\/en\.json'/);
+    assert.match(config, /ja: '.\/src\/locales\/ja\.json'/);
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
