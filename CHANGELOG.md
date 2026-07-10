@@ -1,3 +1,10 @@
+## [0.6.1](https://github.com/xue-moe/i18n-smell-detector/compare/v0.6.0...v0.6.1) (2026-07-10)
+
+
+### Bug Fixes
+
+* **cli:** scan Vue script blocks and validate config ([b57c312](https://github.com/xue-moe/i18n-smell-detector/commit/b57c312b31bc3af766fcdc5a92db722a7536fd0b))
+
 # [0.6.0](https://github.com/xue-moe/i18n-smell-detector/compare/v0.5.2...v0.6.0) (2026-07-09)
 
 
