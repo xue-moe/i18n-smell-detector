@@ -8,6 +8,15 @@ import { flattenResults, renderCombinedReport, summarizeResults } from './report
 import { renderReport } from './reporters/index.js';
 import { enabledChecks, runChecks } from './run-checks.js';
 import { failRank, severityRank } from './severity.js';
+import type {
+  CheckName,
+  CheckResult,
+  DetectorConfig,
+  DetectorIssue,
+  FailOnLevel,
+  ReportFormat,
+  ReportOptions,
+} from './types.js';
 
 const HELP = `
 i18n-smell-detector
@@ -55,7 +64,33 @@ const DEFAULT_CONFIG_TEMPLATE = `export default {
 
 const LOCALE_DIR_CANDIDATES = ['src/locales', 'src/i18n', 'locales', 'i18n'];
 
-function parseArgs(argv) {
+type CommandName = 'help' | 'init' | 'check-identical' | 'check-hardcoded' | 'check-placeholders' | 'check';
+
+type ParsedOptions = {
+  command: CommandName;
+  configPath?: string;
+  format?: ReportFormat;
+  failOn?: FailOnLevel;
+  output?: string;
+  baseline?: string;
+  updateBaseline: boolean;
+  includeIgnored: boolean;
+  debug: boolean;
+  force: boolean;
+  help: boolean;
+};
+
+type CommanderError = Error & {
+  code?: string;
+  optionName?: string | (() => string);
+};
+
+type LocaleCandidate = {
+  name: string;
+  path: string;
+};
+
+function parseArgs(argv: string[]): ParsedOptions {
   const program = new Command()
     .name('i18n-smell-detector')
     .usage('[command] [options]')
@@ -90,56 +125,90 @@ Example:
   try {
     program.parse(argv, { from: 'node' });
   } catch (error) {
-    if (error.code === 'commander.helpDisplayed') return { help: true };
-    throw appError(formatCommanderError(error), 'CLI_USAGE');
+    const commanderError = error as CommanderError;
+    if (commanderError.code === 'commander.helpDisplayed') {
+      return {
+        command: 'help',
+        updateBaseline: false,
+        includeIgnored: false,
+        debug: false,
+        force: false,
+        help: true,
+      };
+    }
+    throw appError(formatCommanderError(commanderError), 'CLI_USAGE');
   }
 
   const [command] = program.args;
-  if (!['help', 'init', 'check-identical', 'check-hardcoded', 'check-placeholders', 'check'].includes(command)) {
+  if (!isCommandName(command)) {
     throw appError(`Unknown command: ${command}\n${HELP}`, 'CLI_USAGE');
   }
 
+  const opts = program.opts<{
+    config?: string;
+    format?: ReportFormat;
+    failOn?: FailOnLevel;
+    output?: string;
+    baseline?: string;
+    updateBaseline: boolean;
+    includeIgnored: boolean;
+    debug: boolean;
+    force: boolean;
+  }>();
+
   return {
     command,
-    configPath: program.opts().config,
-    format: program.opts().format,
-    failOn: program.opts().failOn,
-    output: program.opts().output,
-    baseline: program.opts().baseline,
-    updateBaseline: program.opts().updateBaseline,
-    includeIgnored: program.opts().includeIgnored,
-    debug: program.opts().debug,
-    force: program.opts().force,
+    configPath: opts.config,
+    format: opts.format,
+    failOn: opts.failOn,
+    output: opts.output,
+    baseline: opts.baseline,
+    updateBaseline: opts.updateBaseline,
+    includeIgnored: opts.includeIgnored,
+    debug: opts.debug,
+    force: opts.force,
     help: false,
   };
 }
 
-function readFormat(value) {
+function isCommandName(value: unknown): value is CommandName {
+  return (
+    typeof value === 'string' &&
+    ['help', 'init', 'check-identical', 'check-hardcoded', 'check-placeholders', 'check'].includes(value)
+  );
+}
+
+function readFormat(value: string): ReportFormat {
   return readChoice(value, ['console', 'json', 'markdown', 'sarif', 'html'], 'format');
 }
 
-function readFailOn(value) {
+function readFailOn(value: string): FailOnLevel {
   return readChoice(value, ['none', 'low', 'medium', 'high'], 'fail-on level');
 }
 
-function readChoice(value, choices, name) {
-  if (!choices.includes(value)) throw new InvalidArgumentError(`Unsupported ${name}: ${value}`);
-  return value;
+function readChoice<T extends string>(value: string, choices: readonly T[], name: string): T {
+  if (!choices.includes(value as T)) throw new InvalidArgumentError(`Unsupported ${name}: ${value}`);
+  return value as T;
 }
 
-function formatCommanderError(error) {
+function formatCommanderError(error: CommanderError): string {
   if (error.code === 'commander.unknownOption')
-    return `Unknown option: ${extractQuotedValue(error.message) || error.optionName || ''}`.trim();
+    return `Unknown option: ${extractQuotedValue(error.message) || readOptionName(error)}`.trim();
   if (error.code === 'commander.missingArgument')
-    return `Missing value for option: ${error.optionName?.() || ''}`.trim();
+    return `Missing value for option: ${typeof error.optionName === 'function' ? error.optionName() : error.optionName || ''}`.trim();
   return error.message.replace(/^error: /, '');
 }
 
-function extractQuotedValue(value) {
+function readOptionName(error: CommanderError): string {
+  if (typeof error.optionName === 'function') return error.optionName();
+  return error.optionName || '';
+}
+
+function extractQuotedValue(value: string): string | undefined {
   return value.match(/'([^']+)'/)?.[1];
 }
 
-export async function runCli(argv) {
+export async function runCli(argv: string[]): Promise<void> {
   const options = parseArgs(argv);
 
   if (options.help || options.command === 'help') {
@@ -154,7 +223,7 @@ export async function runCli(argv) {
 
   const configPath = await resolveConfigPath(options.configPath, process.cwd());
   const config = await loadConfig(configPath);
-  const effectiveConfig = {
+  const effectiveConfig: DetectorConfig = {
     ...config,
     failOn: options.failOn || config.failOn || 'high',
     format: options.format || config.format || 'console',
@@ -203,14 +272,14 @@ export async function runCli(argv) {
   if (shouldFail) process.exit(1);
 }
 
-function commandChecks(command, config) {
+function commandChecks(command: CommandName, config: DetectorConfig): CheckName[] {
   if (command === 'check-identical') return ['identical'];
   if (command === 'check-hardcoded') return ['hardcoded'];
   if (command === 'check-placeholders') return ['placeholders'];
   return enabledChecks(config);
 }
 
-function renderSingleReport(result, options) {
+function renderSingleReport(result: CheckResult, options: ReportOptions): string {
   return renderReport(result.issues, {
     ...options,
     title: result.title,
@@ -220,28 +289,29 @@ function renderSingleReport(result, options) {
   });
 }
 
-function visibleIssues(issues, includeIgnored) {
+function visibleIssues(issues: DetectorIssue[], includeIgnored: boolean): DetectorIssue[] {
   return includeIgnored ? issues : issues.filter((issue) => issue.severity !== 'ignored');
 }
 
-function resolveFromConfigDir(filePath, configDir) {
+function resolveFromConfigDir(filePath: string, configDir: string): string {
   return path.isAbsolute(filePath) ? filePath : path.resolve(configDir, filePath);
 }
 
-function resolveOptional(filePath, configDir) {
+function resolveOptional(filePath: string | undefined, configDir: string): string | undefined {
   return filePath ? resolveFromConfigDir(filePath, configDir) : undefined;
 }
 
-async function writeOutput(filePath, report) {
+async function writeOutput(filePath: string, report: string): Promise<void> {
   try {
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, report);
   } catch (error) {
-    throw appError(`Failed to write report file: ${filePath}\nReason: ${error.message}`, 'OUTPUT_WRITE_FAILED');
+    const message = error instanceof Error ? error.message : String(error);
+    throw appError(`Failed to write report file: ${filePath}\nReason: ${message}`, 'OUTPUT_WRITE_FAILED');
   }
 }
 
-async function writeDefaultConfig(configPath, cwd, force) {
+async function writeDefaultConfig(configPath: string, cwd: string, force: boolean): Promise<void> {
   const target = path.isAbsolute(configPath) ? configPath : path.resolve(cwd, configPath);
 
   if (!force && (await exists(target))) {
@@ -253,7 +323,7 @@ async function writeDefaultConfig(configPath, cwd, force) {
   console.log(`Created ${path.relative(cwd, target) || target}`);
 }
 
-async function exists(filePath) {
+async function exists(filePath: string): Promise<boolean> {
   try {
     await access(filePath);
     return true;
@@ -262,7 +332,7 @@ async function exists(filePath) {
   }
 }
 
-function renderWriteSummary(results, output) {
+function renderWriteSummary(results: CheckResult[], output: string): string {
   const summary = summarizeResults(results);
   const counts = Object.entries(summary)
     .map(([check, item]) => `${check}: high=${item.high} medium=${item.medium} low=${item.low} ignored=${item.ignored}`)
@@ -270,7 +340,7 @@ function renderWriteSummary(results, output) {
   return `Report written to ${output}\n${counts}`;
 }
 
-async function createConfigTemplate(baseDir) {
+async function createConfigTemplate(baseDir: string): Promise<string> {
   const locales = await discoverLocaleFiles(baseDir);
   if (locales.length === 0) return DEFAULT_CONFIG_TEMPLATE;
 
@@ -293,10 +363,10 @@ ${localeLines.join('\n')}
 `;
 }
 
-async function discoverLocaleFiles(baseDir) {
+async function discoverLocaleFiles(baseDir: string): Promise<LocaleCandidate[]> {
   for (const dir of LOCALE_DIR_CANDIDATES) {
     const absoluteDir = path.resolve(baseDir, dir);
-    let entries;
+    let entries: Array<{ isFile(): boolean; name: string }>;
     try {
       entries = await readdir(absoluteDir, { withFileTypes: true });
     } catch {
@@ -318,11 +388,11 @@ async function discoverLocaleFiles(baseDir) {
   return [];
 }
 
-function toConfigPath(relativePath) {
+function toConfigPath(relativePath: string): string {
   const normalized = relativePath.split(path.sep).join('/');
   return normalized.startsWith('.') ? normalized : `./${normalized}`;
 }
 
-function quoteProperty(name) {
+function quoteProperty(name: string): string {
   return /^[A-Za-z_$][\w$]*$/.test(name) ? name : JSON.stringify(name);
 }

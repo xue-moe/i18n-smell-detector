@@ -1,17 +1,17 @@
 import { matchesAnyRule } from './match-rule.js';
-import type { Severity } from '../types.js';
+import type { HardcodedConfig, Severity } from '../types.js';
 
 type Classification = { severity: Severity; reason: string };
 
-function isBlank(value) {
+function isBlank(value: string): boolean {
   return value.trim().length === 0;
 }
 
-function isMustacheOnly(value) {
+function isMustacheOnly(value: string): boolean {
   return /^\{\{[\s\S]*\}\}$/.test(value.trim());
 }
 
-function isNonUserFacing(value) {
+function isNonUserFacing(value: string): boolean {
   const text = value.trim();
   return (
     /^[0-9.,:;+\-*/%()\s]+$/.test(text) ||
@@ -24,16 +24,19 @@ function isNonUserFacing(value) {
   );
 }
 
-function latinWords(value) {
+function latinWords(value: string): string[] {
   return value.match(/[\p{L}\p{M}][\p{L}\p{M}']*/gu) || [];
 }
 
-function isShortCommonLabel(value) {
+function isShortCommonLabel(value: string): boolean {
   const text = value.trim();
   return text.length <= 3 || /^(ok|id|no|yes|on|off)$/i.test(text);
 }
 
-export function classifyHardcoded(value: string, config: any = {}): Classification {
+export function classifyHardcoded(
+  value: string,
+  config: { hardcoded?: Partial<HardcodedConfig> } = {},
+): Classification {
   const hardcoded = config.hardcoded || {};
 
   if (matchesAnyRule(value, hardcoded.ignoreValues || [])) {

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { flattenLocale } from './flatten-locale.js';
 import type { DetectorConfig } from '../types.js';
 
-function readErrorReason(error) {
+function readErrorReason(error: unknown): string {
   if (error && typeof error === 'object' && 'code' in error) {
     if (error.code === 'ENOENT') return 'file not found';
     if (error.code === 'EACCES') return 'permission denied';
@@ -12,8 +12,8 @@ function readErrorReason(error) {
   return error instanceof Error ? error.message : String(error);
 }
 
-async function readJson(filePath, displayPath = filePath) {
-  let text;
+async function readJson(filePath: string, displayPath = filePath): Promise<unknown> {
+  let text: string;
   try {
     text = await readFile(filePath, 'utf8');
   } catch (error) {
@@ -28,11 +28,10 @@ async function readJson(filePath, displayPath = filePath) {
   }
 }
 
-/**
- * @param {import('../types.js').DetectorConfig} config
- * @param {string} cwd
- */
-export async function loadFlattenedLocales(config: Pick<DetectorConfig, 'baseLocale' | 'locales'>, cwd: string) {
+export async function loadFlattenedLocales(
+  config: Pick<DetectorConfig, 'baseLocale' | 'locales'>,
+  cwd: string,
+): Promise<Record<string, Record<string, string>>> {
   const locales: Record<string, Record<string, string>> = {};
 
   for (const [locale, localePath] of Object.entries(config.locales || {})) {

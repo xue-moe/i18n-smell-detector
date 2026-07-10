@@ -3,6 +3,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import { appError } from './errors.js';
+import type { DetectorConfig, DetectorConfigInput, FailOnLevel, HardcodedConfig, Rule } from './types.js';
 
 const require = createRequire(import.meta.url);
 
@@ -27,7 +28,7 @@ const DEFAULT_HARDCODED_FUNCTIONS = ['alert', 'confirm', 'toast.success', 'toast
 
 const DEFAULT_SOURCE_GLOBS = ['src/**/*.{vue,js,jsx,ts,tsx}'];
 
-const FAIL_ON_LEVELS = ['none', 'low', 'medium', 'high'];
+const FAIL_ON_LEVELS = ['none', 'low', 'medium', 'high'] as const;
 const BOOLEAN_OPTIONS = [
   'ignoreSameLanguageFamily',
   'trimWhitespace',
@@ -35,10 +36,11 @@ const BOOLEAN_OPTIONS = [
   'includeIgnored',
   'ignoreCodeLike',
 ];
-const CHECK_NAMES = ['identical', 'hardcoded', 'placeholders'];
-const PRESETS = ['recommended', 'strict'];
+const CHECK_NAMES = ['identical', 'hardcoded', 'placeholders'] as const;
+const REPORT_FORMATS = ['console', 'json', 'markdown', 'sarif', 'html'] as const;
+const PRESETS = ['recommended', 'strict'] as const;
 
-async function exists(filePath) {
+async function exists(filePath: string): Promise<boolean> {
   try {
     await access(filePath);
     return true;
@@ -47,7 +49,7 @@ async function exists(filePath) {
   }
 }
 
-export async function resolveConfigPath(explicitPath, cwd) {
+export async function resolveConfigPath(explicitPath: string | undefined, cwd: string): Promise<string> {
   if (explicitPath) {
     const absolute = path.isAbsolute(explicitPath) ? explicitPath : path.resolve(cwd, explicitPath);
     if (!(await exists(absolute))) throw appError(`Config file not found: ${absolute}`, 'CONFIG_NOT_FOUND');
@@ -62,8 +64,8 @@ export async function resolveConfigPath(explicitPath, cwd) {
   throw appError(`Config file not found. Expected one of: ${CONFIG_FILES.join(', ')}`, 'CONFIG_NOT_FOUND');
 }
 
-export async function loadConfig(configPath) {
-  let loaded;
+export async function loadConfig(configPath: string): Promise<DetectorConfig> {
+  let loaded: unknown;
 
   if (configPath.endsWith('.json') || configPath.endsWith('.cjs')) {
     loaded = require(configPath);
@@ -71,17 +73,24 @@ export async function loadConfig(configPath) {
     loaded = await import(pathToFileURL(configPath).href);
   }
 
-  const config = loaded.default || loaded;
+  const config = moduleDefault(loaded);
   validateConfig(config);
   return withDefaults(config);
 }
 
-function validateConfig(config) {
+function moduleDefault(loaded: unknown): unknown {
+  if (loaded && typeof loaded === 'object' && 'default' in loaded) {
+    return (loaded as { default: unknown }).default;
+  }
+  return loaded;
+}
+
+function validateConfig(config: unknown): asserts config is DetectorConfigInput {
   if (!config || typeof config !== 'object') {
     throw appError('Config must export an object', 'CONFIG_INVALID');
   }
 
-  const candidate = /** @type {Record<string, unknown>} */ config;
+  const candidate = config as Record<string, unknown>;
   if ('baseLocale' in candidate && (typeof candidate.baseLocale !== 'string' || !candidate.baseLocale)) {
     throw appError('Config baseLocale must be a non-empty string', 'CONFIG_INVALID');
   }
@@ -124,11 +133,14 @@ function validateConfig(config) {
     throw appError('Config checks must be an object', 'CONFIG_INVALID');
   }
 
-  if ('preset' in candidate && (typeof candidate.preset !== 'string' || !PRESETS.includes(candidate.preset))) {
+  if (
+    'preset' in candidate &&
+    (typeof candidate.preset !== 'string' || !PRESETS.includes(candidate.preset as (typeof PRESETS)[number]))
+  ) {
     throw appError('Config preset must be recommended or strict', 'CONFIG_INVALID');
   }
 
-  const checks = /** @type {Record<string, unknown>} */ candidate.checks || {};
+  const checks = (candidate.checks || {}) as Record<string, unknown>;
   for (const check of CHECK_NAMES) {
     if (check in checks && typeof checks[check] !== 'boolean') {
       throw appError(`Config checks.${check} must be a boolean`, 'CONFIG_INVALID');
@@ -138,12 +150,15 @@ function validateConfig(config) {
   if (
     'format' in candidate &&
     (typeof candidate.format !== 'string' ||
-      !['console', 'json', 'markdown', 'sarif', 'html'].includes(candidate.format))
+      !REPORT_FORMATS.includes(candidate.format as (typeof REPORT_FORMATS)[number]))
   ) {
     throw appError('Config format must be console, json, markdown, sarif, or html', 'CONFIG_INVALID');
   }
 
-  if ('failOn' in candidate && (typeof candidate.failOn !== 'string' || !FAIL_ON_LEVELS.includes(candidate.failOn))) {
+  if (
+    'failOn' in candidate &&
+    (typeof candidate.failOn !== 'string' || !FAIL_ON_LEVELS.includes(candidate.failOn as FailOnLevel))
+  ) {
     throw appError('Config failOn must be high, medium, low, or none', 'CONFIG_INVALID');
   }
 
@@ -161,7 +176,7 @@ function validateConfig(config) {
     throw appError('Config baseline must be a file path string', 'CONFIG_INVALID');
   }
 
-  const hardcoded = /** @type {Record<string, unknown>} */ candidate.hardcoded || {};
+  const hardcoded = (candidate.hardcoded || {}) as Record<string, unknown>;
   if ('vueAttributes' in hardcoded && !isStringArray(hardcoded.vueAttributes)) {
     throw appError('Config hardcoded.vueAttributes must be an array of strings', 'CONFIG_INVALID');
   }
@@ -178,16 +193,12 @@ function validateConfig(config) {
   validateRuleList(hardcoded.ignorePatterns, 'hardcoded.ignorePatterns');
 }
 
-/**
- * @param {import('./types.js').DetectorConfigInput} config
- * @returns {import('./types.js').DetectorConfig}
- */
-function withDefaults(config) {
+function withDefaults(config: DetectorConfigInput): DetectorConfig {
   const { checks, source, hardcoded, placeholderPatterns, ignoreCodeLike, preset, ...rest } = config;
   const presetDefaults =
     preset === 'strict'
-      ? { ignoreSameLanguageFamily: false, failOn: 'medium' }
-      : { ignoreSameLanguageFamily: true, failOn: 'high' };
+      ? { ignoreSameLanguageFamily: false, failOn: 'medium' as const }
+      : { ignoreSameLanguageFamily: true, failOn: 'high' as const };
 
   return {
     baseLocale: 'en',
@@ -206,18 +217,18 @@ function withDefaults(config) {
       placeholders: true,
       ...(checks || {}),
     },
-    source: source || DEFAULT_SOURCE_GLOBS,
+    source: source || [...DEFAULT_SOURCE_GLOBS],
     hardcoded: normalizeHardcodedConfig(hardcoded || {}),
     placeholderPatterns: normalizePlaceholderPatterns(placeholderPatterns || DEFAULT_PLACEHOLDER_PATTERNS),
     ignoreCodeLike: ignoreCodeLike ?? true,
   };
 }
 
-function isStringArray(value) {
+function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string' && item.length > 0);
 }
 
-function validateRuleList(rules, name) {
+function validateRuleList(rules: unknown, name: string): asserts rules is Rule[] | undefined {
   if (rules === undefined) return;
   if (!Array.isArray(rules)) throw appError(`Config ${name} must be an array`, 'CONFIG_INVALID');
 
@@ -228,7 +239,7 @@ function validateRuleList(rules, name) {
   }
 }
 
-function normalizePlaceholderPatterns(patterns) {
+function normalizePlaceholderPatterns(patterns: readonly Rule[]): RegExp[] {
   return patterns
     .map((pattern) => {
       if (pattern instanceof RegExp) return withGlobalFlag(pattern);
@@ -240,24 +251,25 @@ function normalizePlaceholderPatterns(patterns) {
       try {
         return new RegExp(pattern, 'g');
       } catch (error) {
-        throw appError(`Invalid placeholder pattern "${pattern}": ${error.message}`, 'CONFIG_INVALID');
+        const message = error instanceof Error ? error.message : String(error);
+        throw appError(`Invalid placeholder pattern "${pattern}": ${message}`, 'CONFIG_INVALID');
       }
     })
     .sort((a, b) => b.source.length - a.source.length);
 }
 
-function normalizeHardcodedConfig(config) {
+function normalizeHardcodedConfig(config: Partial<HardcodedConfig>): HardcodedConfig {
   return {
-    vueAttributes: config.vueAttributes || DEFAULT_HARDCODED_ATTRIBUTES,
-    jsxAttributes: config.jsxAttributes || DEFAULT_HARDCODED_ATTRIBUTES,
-    functions: config.functions || DEFAULT_HARDCODED_FUNCTIONS,
+    vueAttributes: config.vueAttributes || [...DEFAULT_HARDCODED_ATTRIBUTES],
+    jsxAttributes: config.jsxAttributes || [...DEFAULT_HARDCODED_ATTRIBUTES],
+    functions: config.functions || [...DEFAULT_HARDCODED_FUNCTIONS],
     ignoreFiles: config.ignoreFiles || [],
     ignoreValues: config.ignoreValues || [],
     ignorePatterns: normalizeRegexRules(config.ignorePatterns || [], 'hardcoded.ignorePatterns'),
   };
 }
 
-function normalizeRegexRules(rules, name) {
+function normalizeRegexRules(rules: readonly Rule[], name: string): RegExp[] {
   return rules.map((rule) => {
     if (rule instanceof RegExp) return rule;
     if (typeof rule !== 'string') {
@@ -267,12 +279,13 @@ function normalizeRegexRules(rules, name) {
     try {
       return new RegExp(rule);
     } catch (error) {
-      throw appError(`Invalid ${name} pattern "${rule}": ${error.message}`, 'CONFIG_INVALID');
+      const message = error instanceof Error ? error.message : String(error);
+      throw appError(`Invalid ${name} pattern "${rule}": ${message}`, 'CONFIG_INVALID');
     }
   });
 }
 
-function withGlobalFlag(pattern) {
+function withGlobalFlag(pattern: RegExp): RegExp {
   const flags = pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`;
   return new RegExp(pattern.source, flags);
 }

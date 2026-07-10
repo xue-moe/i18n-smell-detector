@@ -1,7 +1,29 @@
 import { NodeTypes, parse } from '@vue/compiler-dom';
 import { classifyHardcoded } from '../rules/classify-hardcoded.js';
+import type { HardcodedConfig, HardcodedIssue, Severity } from '../types.js';
 
-function offsetToLocation(source, offset) {
+type HardcodedScanConfig = { hardcoded: Partial<HardcodedConfig> };
+
+type VueLocation = {
+  start: {
+    offset: number;
+  };
+};
+
+type VueNode = {
+  type: number;
+  children?: VueNode[];
+  props?: VueNode[];
+  loc: VueLocation;
+  content?: string;
+  name?: string;
+  value?: {
+    content: string;
+    loc: VueLocation;
+  };
+};
+
+function offsetToLocation(source: string, offset: number): { line: number; column: number } {
   const before = source.slice(0, offset);
   const lines = before.split(/\r?\n/);
   return {
@@ -10,15 +32,33 @@ function offsetToLocation(source, offset) {
   };
 }
 
-function normalizeText(value) {
+function normalizeText(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
 }
 
-function isI18nExpression(value) {
+function isI18nExpression(value: string): boolean {
   return /\b(?:t|te|\$t|i18n\.t)\s*\(/.test(value);
 }
 
-function makeIssue({ file, lineOffset, template, loc, value, kind, reason, severity }) {
+function makeIssue({
+  file,
+  lineOffset,
+  template,
+  loc,
+  value,
+  kind,
+  reason,
+  severity,
+}: {
+  file: string;
+  lineOffset: number;
+  template: string;
+  loc: VueLocation;
+  value: string;
+  kind: string;
+  reason: string;
+  severity: Severity;
+}): HardcodedIssue {
   const start = offsetToLocation(template, loc.start.offset);
   return {
     file,
@@ -31,7 +71,25 @@ function makeIssue({ file, lineOffset, template, loc, value, kind, reason, sever
   };
 }
 
-function scanValue({ file, lineOffset, template, loc, value, kind, baseReason, config }) {
+function scanValue({
+  file,
+  lineOffset,
+  template,
+  loc,
+  value,
+  kind,
+  baseReason,
+  config,
+}: {
+  file: string;
+  lineOffset: number;
+  template: string;
+  loc: VueLocation;
+  value: string;
+  kind: string;
+  baseReason: string;
+  config: HardcodedScanConfig;
+}): HardcodedIssue | null {
   const text = normalizeText(value);
   if (!text) return null;
 
@@ -48,21 +106,25 @@ function scanValue({ file, lineOffset, template, loc, value, kind, baseReason, c
   });
 }
 
-function walk(node, visitor) {
+function walk(node: VueNode, visitor: (node: VueNode) => void): void {
   visitor(node);
   for (const child of node.children || []) walk(child, visitor);
 }
 
-export function scanVueTemplate(template, { file, lineOffset = 0, config }) {
-  let ast;
+export function scanVueTemplate(
+  template: string,
+  { file, lineOffset = 0, config }: { file: string; lineOffset?: number; config: HardcodedScanConfig },
+): HardcodedIssue[] {
+  let ast: VueNode;
   try {
-    ast = parse(template, { comments: false });
+    ast = parse(template, { comments: false }) as VueNode;
   } catch (error) {
-    throw new Error(`Malformed Vue template in ${file}: ${error.message}`);
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Malformed Vue template in ${file}: ${message}`);
   }
 
   const attributes = new Set(config.hardcoded.vueAttributes);
-  const issues = [];
+  const issues: HardcodedIssue[] = [];
 
   walk(ast, (node) => {
     if (node.type === NodeTypes.TEXT) {
@@ -71,7 +133,7 @@ export function scanVueTemplate(template, { file, lineOffset = 0, config }) {
         lineOffset,
         template,
         loc: node.loc,
-        value: node.content,
+        value: node.content || '',
         kind: 'vue-text',
         baseReason: 'static template text',
         config,
@@ -84,7 +146,7 @@ export function scanVueTemplate(template, { file, lineOffset = 0, config }) {
 
     for (const prop of node.props || []) {
       if (prop.type !== NodeTypes.ATTRIBUTE) continue;
-      if (!attributes.has(prop.name) || !prop.value) continue;
+      if (!prop.name || !attributes.has(prop.name) || !prop.value) continue;
       if (isI18nExpression(prop.value.content)) continue;
 
       const issue = scanValue({

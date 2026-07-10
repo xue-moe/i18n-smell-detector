@@ -3,16 +3,16 @@ import type { DetectorConfig, Severity } from '../types.js';
 
 type Classification = { severity: Severity; reason: string };
 
-function isBlank(value) {
+function isBlank(value: string): boolean {
   return value.trim().length === 0;
 }
 
-function isExternalReference(value) {
+function isExternalReference(value: string): boolean {
   const text = value.trim();
   return /^(https?:\/\/|tel:)/i.test(text) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text);
 }
 
-function isCodeLike(value) {
+function isCodeLike(value: string): boolean {
   const text = value.trim();
   return (
     /^#[0-9a-f]{3,8}$/i.test(text) ||
@@ -23,7 +23,7 @@ function isCodeLike(value) {
   );
 }
 
-function isPlaceholderOnly(value, patterns) {
+function isPlaceholderOnly(value: string, patterns: RegExp[]): boolean {
   let text = value.trim();
 
   for (const pattern of patterns || []) {
@@ -34,28 +34,19 @@ function isPlaceholderOnly(value, patterns) {
   return text.trim() === '';
 }
 
-function getLatinWords(value) {
+function getLatinWords(value: string): string[] {
   return value.match(/[\p{L}\p{M}][\p{L}\p{M}']*/gu) || [];
 }
 
-function languageFamily(locale) {
+function languageFamily(locale: string): string {
   return locale.toLowerCase().split(/[-_]/)[0];
 }
 
-function isShortCommonLabel(value) {
+function isShortCommonLabel(value: string): boolean {
   const text = value.trim();
   return text.length <= 3 || /^(ok|id|no|yes|on|off|5g|4g|lte)$/i.test(text);
 }
 
-/**
- * @param {Object} input
- * @param {string} input.key
- * @param {string} input.value
- * @param {string} input.baseLocale
- * @param {string} input.targetLocale
- * @param {import('../types.js').DetectorConfig} input.config
- * @returns {{ severity: import('../types.js').Severity, reason: string }}
- */
 export function classifyIdentical({
   key,
   value,

@@ -82,10 +82,16 @@ export interface PlaceholderIssue {
 
 export type DetectorIssue = IdenticalIssue | HardcodedIssue | PlaceholderIssue;
 export type CheckName = keyof DetectorChecks;
+export type CustomCheckName = CheckName | 'custom';
+
+export type IssueWithCheck = DetectorIssue & {
+  check: CustomCheckName;
+  title?: string;
+};
 
 export interface CheckResult<TIssue extends DetectorIssue = DetectorIssue> {
-  check: CheckName;
-  title: string;
+  check: CustomCheckName;
+  title?: string;
   heading: string;
   emptyMessage: string;
   issues: TIssue[];
@@ -97,5 +103,7 @@ export interface ReportOptions {
   title?: string;
   heading?: string;
   emptyMessage?: string;
-  check?: CheckName | 'custom';
+  check?: CustomCheckName;
 }
+
+export type SeveritySummary = Record<Severity, number>;

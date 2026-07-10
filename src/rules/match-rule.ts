@@ -1,14 +1,16 @@
-function wildcardToRegExp(pattern) {
+import type { Rule } from '../types.js';
+
+function wildcardToRegExp(pattern: string): RegExp {
   const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
   return new RegExp(`^${escaped.replace(/\*/g, '.*')}$`);
 }
 
-function testRegExp(value, pattern) {
+function testRegExp(value: string, pattern: RegExp): boolean {
   pattern.lastIndex = 0;
   return pattern.test(value);
 }
 
-export function matchesRule(value, rule, options: { wildcard?: boolean } = {}) {
+export function matchesRule(value: string, rule: Rule, options: { wildcard?: boolean } = {}): boolean {
   if (rule instanceof RegExp) return testRegExp(value, rule);
   if (typeof rule !== 'string') return false;
 
@@ -16,6 +18,6 @@ export function matchesRule(value, rule, options: { wildcard?: boolean } = {}) {
   return value === rule;
 }
 
-export function matchesAnyRule(value, rules = [], options: { wildcard?: boolean } = {}) {
+export function matchesAnyRule(value: string, rules: Rule[] = [], options: { wildcard?: boolean } = {}): boolean {
   return rules.some((rule) => matchesRule(value, rule, options));
 }

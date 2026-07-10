@@ -6,7 +6,7 @@ import path from 'node:path';
 import { checkHardcodedStrings } from '../dist/check-hardcoded.js';
 import { loadConfig } from '../dist/config.js';
 
-async function writeConfig(root, extra = '') {
+async function writeConfig(root: string, extra = '') {
   const configPath = path.join(root, 'i18n-smell.config.mjs');
   await writeFile(
     configPath,

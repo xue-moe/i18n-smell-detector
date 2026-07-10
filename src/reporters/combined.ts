@@ -3,8 +3,9 @@ import { renderHtmlReport } from './html.js';
 import { renderMarkdownReport } from './markdown.js';
 import { renderSarifReport } from './sarif.js';
 import { summarizeIssues } from './summary.js';
+import type { CheckResult, IssueWithCheck, ReportOptions, SeveritySummary } from '../types.js';
 
-export function renderCombinedReport(results, options) {
+export function renderCombinedReport(results: CheckResult[], options: ReportOptions): string {
   if (options.format === 'json') return renderCombinedJson(results, options);
   if (options.format === 'markdown') return renderCombinedMarkdown(results, options);
   if (options.format === 'sarif') return renderSarifReport(results, options);
@@ -12,7 +13,10 @@ export function renderCombinedReport(results, options) {
   return renderCombinedConsole(results, options);
 }
 
-export function flattenResults(results, options) {
+export function flattenResults(
+  results: CheckResult[],
+  options: Pick<ReportOptions, 'includeIgnored'>,
+): IssueWithCheck[] {
   return results.flatMap((result) => {
     const issues = options.includeIgnored
       ? result.issues
@@ -21,11 +25,11 @@ export function flattenResults(results, options) {
   });
 }
 
-export function summarizeResults(results) {
+export function summarizeResults(results: CheckResult[]): Record<string, SeveritySummary> {
   return Object.fromEntries(results.map((result) => [result.check, summarizeIssues(result.issues)]));
 }
 
-function renderCombinedJson(results, options) {
+function renderCombinedJson(results: CheckResult[], options: ReportOptions): string {
   return `${JSON.stringify(
     {
       summary: summarizeResults(results),
@@ -36,7 +40,7 @@ function renderCombinedJson(results, options) {
   )}\n`;
 }
 
-function renderCombinedConsole(results, options) {
+function renderCombinedConsole(results: CheckResult[], options: ReportOptions): string {
   return results
     .map((result) =>
       renderConsoleReport(result.issues, {
@@ -48,7 +52,7 @@ function renderCombinedConsole(results, options) {
     .join('\n\n');
 }
 
-function renderCombinedMarkdown(results, options) {
+function renderCombinedMarkdown(results: CheckResult[], options: ReportOptions): string {
   const lines = [
     '# i18n-smell-detector report',
     '',
@@ -79,6 +83,6 @@ function renderCombinedMarkdown(results, options) {
   return `${lines.join('\n')}\n`;
 }
 
-function asSection(markdown) {
+function asSection(markdown: string): string {
   return markdown.replace(/^# /, '## ');
 }

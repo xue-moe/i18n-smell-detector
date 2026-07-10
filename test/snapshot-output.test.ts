@@ -6,7 +6,7 @@ import path from 'node:path';
 
 const bin = path.resolve('bin/i18n-smell-detector.js');
 
-function runReport(format) {
+function runReport(format: 'json' | 'markdown') {
   const result = spawnSync(
     process.execPath,
     [bin, 'check', '--config', 'examples/basic/i18n-smell.config.mjs', '--format', format, '--fail-on', 'none'],

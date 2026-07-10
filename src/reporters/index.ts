@@ -3,8 +3,9 @@ import { renderJsonReport } from './json.js';
 import { renderMarkdownReport } from './markdown.js';
 import { renderSarifReport } from './sarif.js';
 import { renderHtmlReport } from './html.js';
+import type { DetectorIssue, ReportOptions } from '../types.js';
 
-export function renderReport(issues, options) {
+export function renderReport(issues: DetectorIssue[], options: ReportOptions): string {
   if (options.format === 'json') return renderJsonReport(issues, options);
   if (options.format === 'markdown') return renderMarkdownReport(issues, options);
   if (options.format === 'html')
@@ -12,9 +13,9 @@ export function renderReport(issues, options) {
       [
         {
           check: options.check || 'custom',
-          heading: options.heading,
-          title: options.title,
-          emptyMessage: options.emptyMessage,
+          heading: options.heading || options.title || 'Custom report',
+          title: options.title || options.heading || 'custom report',
+          emptyMessage: options.emptyMessage || 'No issues found.',
           issues,
         },
       ],
@@ -25,7 +26,9 @@ export function renderReport(issues, options) {
       [
         {
           check: options.check || 'custom',
-          heading: options.heading,
+          heading: options.heading || options.title || 'Custom report',
+          title: options.title || options.heading || 'custom report',
+          emptyMessage: options.emptyMessage || 'No issues found.',
           issues,
         },
       ],

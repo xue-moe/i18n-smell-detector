@@ -1,10 +1,5 @@
-/**
- * @param {unknown} input
- * @param {string} [prefix]
- * @returns {Record<string, string>}
- */
-export function flattenLocale(input, prefix = '') {
-  const result = {};
+export function flattenLocale(input: unknown, prefix = ''): Record<string, string> {
+  const result: Record<string, string> = {};
 
   if (typeof input === 'string') {
     if (prefix) result[prefix] = input;

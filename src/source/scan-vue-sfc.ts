@@ -2,12 +2,15 @@ import { readFile } from 'node:fs/promises';
 import { parse } from '@vue/compiler-sfc';
 import { scanJsText } from './scan-js-source.js';
 import { scanVueTemplate } from './scan-vue-template.js';
+import type { HardcodedConfig, HardcodedIssue } from '../types.js';
 
-function lineOffsetBefore(source, offset) {
+type HardcodedScanConfig = { hardcoded: Partial<HardcodedConfig> };
+
+function lineOffsetBefore(source: string, offset: number): number {
   return source.slice(0, offset).split(/\r?\n/).length - 1;
 }
 
-export async function scanVueSfc(file, config) {
+export async function scanVueSfc(file: string, config: HardcodedScanConfig): Promise<HardcodedIssue[]> {
   const source = await readFile(file, 'utf8');
   const result = parse(source, { filename: file });
 
@@ -16,7 +19,7 @@ export async function scanVueSfc(file, config) {
     throw new Error(`Malformed Vue file ${file}: ${error.message || String(error)}`);
   }
 
-  const issues = [];
+  const issues: HardcodedIssue[] = [];
   const { template, script, scriptSetup } = result.descriptor;
 
   if (template) {

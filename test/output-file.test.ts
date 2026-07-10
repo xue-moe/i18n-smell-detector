@@ -7,7 +7,7 @@ import path from 'node:path';
 
 const bin = path.resolve('bin/i18n-smell-detector.js');
 
-function run(args) {
+function run(args: string[]) {
   return spawnSync(process.execPath, [bin, ...args], { encoding: 'utf8' });
 }
 

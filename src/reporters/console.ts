@@ -1,23 +1,24 @@
 import { summarizeIssues } from './summary.js';
+import type { DetectorIssue, HardcodedIssue, PlaceholderIssue, ReportOptions, Severity } from '../types.js';
 
-function color(code, text) {
+function color(code: string, text: string): string {
   if (process.env.NO_COLOR) return text;
   return `\u001b[${code}m${text}\u001b[0m`;
 }
 
-function label(level) {
+function label(level: Severity): string {
   if (level === 'high') return color('31;1', 'HIGH');
   if (level === 'medium') return color('33;1', 'MEDIUM');
   if (level === 'low') return color('36;1', 'LOW');
   return color('90', 'IGNORED');
 }
 
-function preview(value) {
+function preview(value: string): string {
   const text = value.replace(/\s+/g, ' ').trim();
   return text.length <= 90 ? text : `${text.slice(0, 87)}...`;
 }
 
-export function renderConsoleReport(issues, options) {
+export function renderConsoleReport(issues: DetectorIssue[], options: ReportOptions): string {
   const visible = options.includeIgnored ? issues : issues.filter((issue) => issue.severity !== 'ignored');
   const counts = summarizeIssues(issues);
   const lines = [
@@ -43,14 +44,22 @@ export function renderConsoleReport(issues, options) {
   return lines.join('\n');
 }
 
-function formatLocation(issue) {
-  if (issue.file) return `${issue.file}:${issue.line}:${issue.column}`;
+function formatLocation(issue: DetectorIssue): string {
+  if (isHardcodedIssue(issue)) return `${issue.file}:${issue.line}:${issue.column}`;
   return `${issue.targetLocale}.${issue.key}`;
 }
 
-function formatDetails(issue) {
-  const details = [];
-  if (issue.missing?.length) details.push(`missing: ${issue.missing.join(', ')}`);
-  if (issue.extra?.length) details.push(`extra: ${issue.extra.join(', ')}`);
+function formatDetails(issue: DetectorIssue): string[] {
+  const details: string[] = [];
+  if (isPlaceholderIssue(issue) && issue.missing.length) details.push(`missing: ${issue.missing.join(', ')}`);
+  if (isPlaceholderIssue(issue) && issue.extra.length) details.push(`extra: ${issue.extra.join(', ')}`);
   return details;
+}
+
+function isHardcodedIssue(issue: DetectorIssue): issue is HardcodedIssue {
+  return 'file' in issue;
+}
+
+function isPlaceholderIssue(issue: DetectorIssue): issue is PlaceholderIssue {
+  return 'missing' in issue;
 }

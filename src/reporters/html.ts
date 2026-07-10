@@ -1,4 +1,5 @@
 import { summarizeIssues } from './summary.js';
+import type { CheckResult, DetectorIssue, HardcodedIssue, PlaceholderIssue, ReportOptions } from '../types.js';
 
 function escapeHtml(value: unknown): string {
   return String(value)
@@ -9,23 +10,23 @@ function escapeHtml(value: unknown): string {
     .replace(/'/g, '&#39;');
 }
 
-function visibleIssues(result: any, includeIgnored: boolean) {
+function visibleIssues(result: CheckResult, includeIgnored: boolean): DetectorIssue[] {
   return includeIgnored ? result.issues : result.issues.filter((issue: any) => issue.severity !== 'ignored');
 }
 
-function formatLocation(issue: any): string {
-  if (issue.file) return `${issue.file}:${issue.line}:${issue.column}`;
+function formatLocation(issue: DetectorIssue): string {
+  if (isHardcodedIssue(issue)) return `${issue.file}:${issue.line}:${issue.column}`;
   return `${issue.targetLocale}.${issue.key}`;
 }
 
-function formatDetails(issue: any): string {
-  const details = [];
-  if (issue.missing?.length) details.push(`missing: ${issue.missing.join(', ')}`);
-  if (issue.extra?.length) details.push(`extra: ${issue.extra.join(', ')}`);
+function formatDetails(issue: DetectorIssue): string {
+  const details: string[] = [];
+  if (isPlaceholderIssue(issue) && issue.missing.length) details.push(`missing: ${issue.missing.join(', ')}`);
+  if (isPlaceholderIssue(issue) && issue.extra.length) details.push(`extra: ${issue.extra.join(', ')}`);
   return details.join('; ');
 }
 
-export function renderHtmlReport(results: any[], options: any): string {
+export function renderHtmlReport(results: CheckResult[], options: ReportOptions): string {
   const includeIgnored = options.includeIgnored || false;
   const summaryRows = results
     .map((result) => {
@@ -38,7 +39,7 @@ export function renderHtmlReport(results: any[], options: any): string {
     .map((result) => {
       const visible = visibleIssues(result, includeIgnored);
       const rows = visible
-        .map((issue: any) => {
+        .map((issue) => {
           const details = formatDetails(issue);
           return `<tr class="severity-${escapeHtml(issue.severity)}"><td>${escapeHtml(issue.severity)}</td><td>${escapeHtml(formatLocation(issue))}</td><td><code>${escapeHtml(issue.value)}</code></td><td>${escapeHtml(details)}</td><td>${escapeHtml(issue.reason)}</td></tr>`;
         })
@@ -87,4 +88,12 @@ export function renderHtmlReport(results: any[], options: any): string {
 </body>
 </html>
 `;
+}
+
+function isHardcodedIssue(issue: DetectorIssue): issue is HardcodedIssue {
+  return 'file' in issue;
+}
+
+function isPlaceholderIssue(issue: DetectorIssue): issue is PlaceholderIssue {
+  return 'missing' in issue;
 }

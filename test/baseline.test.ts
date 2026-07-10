@@ -7,11 +7,27 @@ import path from 'node:path';
 
 const bin = path.resolve('bin/i18n-smell-detector.js');
 
-function run(args) {
+type JsonIssue = {
+  id?: string;
+  value?: string;
+  check?: string;
+  reason?: string;
+};
+
+type JsonIssueFile = {
+  version?: number;
+  issues: JsonIssue[];
+};
+
+function parseIssuesJson(text: string): JsonIssueFile {
+  return JSON.parse(text) as JsonIssueFile;
+}
+
+function run(args: string[]) {
   return spawnSync(process.execPath, [bin, ...args], { encoding: 'utf8' });
 }
 
-async function writeBasicProject(root, buttonText = 'Save') {
+async function writeBasicProject(root: string, buttonText = 'Save') {
   await mkdir(path.join(root, 'src/locales'), { recursive: true });
   await mkdir(path.join(root, 'src/components'), { recursive: true });
   await writeFile(
@@ -69,10 +85,10 @@ test('baseline update writes current issues', async () => {
     ]);
 
     assert.equal(result.status, 0);
-    const parsed = JSON.parse(await readFile(baseline, 'utf8'));
+    const parsed = parseIssuesJson(await readFile(baseline, 'utf8'));
     assert.equal(parsed.version, 1);
     assert.ok(parsed.issues.some((issue) => issue.id === 'identical:zh:home.title'));
-    assert.ok(parsed.issues.some((issue) => issue.id.startsWith('hardcoded:')));
+    assert.ok(parsed.issues.some((issue) => issue.id?.startsWith('hardcoded:')));
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
@@ -111,7 +127,7 @@ test('baseline suppresses known issues but leaves new issues failing', async () 
     ]);
 
     assert.equal(result.status, 1);
-    const report = JSON.parse(result.stdout);
+    const report = parseIssuesJson(result.stdout);
     assert.equal(
       report.issues.some((issue) => issue.id === 'identical:zh:home.title'),
       false,
@@ -189,7 +205,7 @@ test('stale baseline issues disappear when baseline is updated', async () => {
     ]);
 
     assert.equal(result.status, 0);
-    const parsed = JSON.parse(await readFile(baseline, 'utf8'));
+    const parsed = parseIssuesJson(await readFile(baseline, 'utf8'));
     assert.equal(
       parsed.issues.some((issue) => issue.id === 'identical:zh:removed.key'),
       false,
@@ -238,7 +254,7 @@ test('moving a hardcoded string changes its baseline id', async () => {
     ]);
 
     assert.equal(result.status, 0);
-    const report = JSON.parse(result.stdout);
+    const report = parseIssuesJson(result.stdout);
     assert.ok(report.issues.some((issue) => issue.check === 'hardcoded' && issue.value === 'Save'));
   } finally {
     await rm(tempDir, { recursive: true, force: true });
@@ -279,7 +295,7 @@ test('includeIgnored shows baseline issues', async () => {
     ]);
 
     assert.equal(result.status, 0);
-    const report = JSON.parse(result.stdout);
+    const report = parseIssuesJson(result.stdout);
     assert.ok(report.issues.some((issue) => issue.id === 'identical:zh:home.title' && issue.reason === 'baseline'));
   } finally {
     await rm(tempDir, { recursive: true, force: true });
@@ -302,7 +318,7 @@ test('baseline update writes only current non-ignored findings', async () => {
     ]);
 
     assert.equal(result.status, 0);
-    const parsed = JSON.parse(await readFile(baseline, 'utf8'));
+    const parsed = parseIssuesJson(await readFile(baseline, 'utf8'));
     assert.equal(
       parsed.issues.some((issue) => issue.value === 'OK'),
       false,

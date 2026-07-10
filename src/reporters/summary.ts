@@ -1,4 +1,6 @@
-export function summarizeIssues(issues) {
+import type { DetectorIssue, SeveritySummary } from '../types.js';
+
+export function summarizeIssues(issues: DetectorIssue[]): SeveritySummary {
   return issues.reduce(
     (summary, issue) => {
       summary[issue.severity] += 1;

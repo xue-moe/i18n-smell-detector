@@ -1,6 +1,7 @@
 import { summarizeIssues } from './summary.js';
+import type { DetectorIssue, HardcodedIssue, PlaceholderIssue, ReportOptions } from '../types.js';
 
-function escapeCell(value) {
+function escapeCell(value: unknown): string {
   return String(value)
     .replace(/\r?\n/g, ' ')
     .replace(/\\/g, '\\\\')
@@ -8,7 +9,7 @@ function escapeCell(value) {
     .replace(/[*_`[\]]/g, '\\$&');
 }
 
-export function renderMarkdownReport(issues, options) {
+export function renderMarkdownReport(issues: DetectorIssue[], options: ReportOptions): string {
   const visible = options.includeIgnored ? issues : issues.filter((issue) => issue.severity !== 'ignored');
   const summary = summarizeIssues(issues);
   const lines = [
@@ -23,10 +24,10 @@ export function renderMarkdownReport(issues, options) {
     return `${lines.join('\n')}\n`;
   }
 
-  if (visible.some((issue) => issue.file)) {
+  if (visible.some(isHardcodedIssue)) {
     lines.push('| Level | Location | Value | Reason |');
     lines.push('|---|---|---|---|');
-  } else if (visible.some((issue) => issue.missing || issue.extra)) {
+  } else if (visible.some(isPlaceholderIssue)) {
     lines.push('| Level | Locale | Key | Value | Missing | Extra | Reason |');
     lines.push('|---|---|---|---|---|---|---|');
   } else {
@@ -35,12 +36,12 @@ export function renderMarkdownReport(issues, options) {
   }
 
   for (const issue of visible) {
-    if (issue.file) {
+    if (isHardcodedIssue(issue)) {
       lines.push(
         `| ${escapeCell(issue.severity)} | ${escapeCell(formatLocation(issue))} | ${escapeCell(issue.value)} | ${escapeCell(issue.reason)} |`,
       );
     } else {
-      if (issue.missing || issue.extra) {
+      if (isPlaceholderIssue(issue)) {
         lines.push(
           `| ${escapeCell(issue.severity)} | ${escapeCell(issue.targetLocale)} | ${escapeCell(issue.key)} | ${escapeCell(issue.value)} | ${escapeCell((issue.missing || []).join(', '))} | ${escapeCell((issue.extra || []).join(', '))} | ${escapeCell(issue.reason)} |`,
         );
@@ -55,7 +56,15 @@ export function renderMarkdownReport(issues, options) {
   return `${lines.join('\n')}\n`;
 }
 
-function formatLocation(issue) {
-  if (issue.file) return `${issue.file}:${issue.line}:${issue.column}`;
+function formatLocation(issue: DetectorIssue): string {
+  if (isHardcodedIssue(issue)) return `${issue.file}:${issue.line}:${issue.column}`;
   return `${issue.targetLocale}.${issue.key}`;
+}
+
+function isHardcodedIssue(issue: DetectorIssue): issue is HardcodedIssue {
+  return 'file' in issue;
+}
+
+function isPlaceholderIssue(issue: DetectorIssue): issue is PlaceholderIssue {
+  return 'missing' in issue;
 }
