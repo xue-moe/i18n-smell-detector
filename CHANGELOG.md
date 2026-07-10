@@ -1,3 +1,10 @@
+## [0.7.2](https://github.com/xue-moe/i18n-smell-detector/compare/v0.7.1...v0.7.2) (2026-07-10)
+
+
+### Bug Fixes
+
+* typecheck integration templates ([cec26e2](https://github.com/xue-moe/i18n-smell-detector/commit/cec26e220c3cf2d62a6810bb6e71e00b4cdf847a))
+
 ## [0.7.1](https://github.com/xue-moe/i18n-smell-detector/compare/v0.7.0...v0.7.1) (2026-07-10)
 
 
