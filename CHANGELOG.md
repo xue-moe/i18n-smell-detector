@@ -1,3 +1,10 @@
+## [0.7.1](https://github.com/xue-moe/i18n-smell-detector/compare/v0.7.0...v0.7.1) (2026-07-10)
+
+
+### Bug Fixes
+
+* enable strict TypeScript checks ([363183f](https://github.com/xue-moe/i18n-smell-detector/commit/363183f4309e5a0d40823f5b96f4a564f98fd700))
+
 # [0.7.0](https://github.com/xue-moe/i18n-smell-detector/compare/v0.6.1...v0.7.0) (2026-07-10)
 
 
