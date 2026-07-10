@@ -4,5 +4,9 @@
   "type": "module",
   "private": true,
   "description": "Experimental ESLint rules that mirror i18n-smell-detector checks.",
-  "main": "./index.js"
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  }
 }

@@ -18,5 +18,8 @@
       }
     ]
   },
-  "main": "./extension.js"
+  "main": "./dist/extension.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  }
 }

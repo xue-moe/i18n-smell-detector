@@ -65,7 +65,9 @@
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
+    "@types/eslint": "^9.6.1",
     "@types/node": "^18.19.130",
+    "@types/vscode": "^1.125.0",
     "prettier": "^3.9.5",
     "semantic-release": "^25.0.5",
     "tsx": "^4.23.0",

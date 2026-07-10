@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-export function activate(context) {
+export function activate(context: vscode.ExtensionContext): void {
   const disposable = vscode.commands.registerCommand('i18n-smell-detector.check', async () => {
     const terminal = vscode.window.createTerminal('i18n Smell Detector');
     terminal.show();
@@ -10,4 +10,4 @@ export function activate(context) {
   context.subscriptions.push(disposable);
 }
 
-export function deactivate() {}
+export function deactivate(): void {}

@@ -1,13 +1,20 @@
 # eslint-plugin-i18n-smell-detector
 
-Experimental ESLint integration for editor and pull-request feedback.
+Experimental TypeScript ESLint integration for editor and pull-request feedback.
 
 This is intentionally small. The CLI remains the source of truth for full reports, baselines, and SARIF output.
+
+Build it first:
+
+```bash
+npm install
+npm run build
+```
 
 Example flat config:
 
 ```js
-import i18nSmell from './integrations/eslint-plugin-i18n-smell-detector/index.js';
+import i18nSmell from './integrations/eslint-plugin-i18n-smell-detector/dist/index.js';
 
 export default [
   {
