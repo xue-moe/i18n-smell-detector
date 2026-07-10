@@ -1,3 +1,10 @@
+# [0.7.0](https://github.com/xue-moe/i18n-smell-detector/compare/v0.6.1...v0.7.0) (2026-07-10)
+
+
+### Features
+
+* migrate detector to TypeScript ([b449c7f](https://github.com/xue-moe/i18n-smell-detector/commit/b449c7f13f5d8403fb2cc66b3bc2d032364670b8))
+
 ## [0.6.1](https://github.com/xue-moe/i18n-smell-detector/compare/v0.6.0...v0.6.1) (2026-07-10)
 
 
