@@ -1,0 +1,8 @@
+{
+  "name": "eslint-plugin-i18n-smell-detector",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Experimental ESLint rules that mirror i18n-smell-detector checks.",
+  "main": "./index.js"
+}

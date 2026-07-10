@@ -26,6 +26,7 @@ jobs:
 
       - run: npm install -g npm@latest
       - run: npm ci
+      - run: npm run typecheck
       - run: npm test
       - run: npm run check
       - run: npm run example:basic

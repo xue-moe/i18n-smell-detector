@@ -1,0 +1,22 @@
+{
+  "name": "i18n-smell-detector-vscode",
+  "displayName": "i18n Smell Detector",
+  "version": "0.0.0",
+  "private": true,
+  "publisher": "i18n-smell-detector",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "activationEvents": [
+    "onCommand:i18n-smell-detector.check"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "i18n-smell-detector.check",
+        "title": "i18n Smell Detector: Run Check"
+      }
+    ]
+  },
+  "main": "./extension.js"
+}

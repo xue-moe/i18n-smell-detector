@@ -6,6 +6,13 @@
   "bin": {
     "i18n-smell-detector": "./bin/i18n-smell-detector.js"
   },
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/xue-moe/i18n-smell-detector.git"
@@ -16,20 +23,26 @@
   "homepage": "https://github.com/xue-moe/i18n-smell-detector#readme",
   "files": [
     "bin",
-    "src",
+    "dist",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "check": "node ./bin/i18n-smell-detector.js check --config ./examples/vue-vite/i18n-smell.config.mjs --fail-on none",
-    "check:identical": "node ./bin/i18n-smell-detector.js check-identical --config ./examples/vue-vite/i18n-smell.config.mjs --fail-on none",
-    "check:hardcoded": "node ./bin/i18n-smell-detector.js check-hardcoded --config ./examples/vue-vite/i18n-smell.config.mjs --fail-on none",
-    "example:basic": "node ./bin/i18n-smell-detector.js check --config ./examples/basic/i18n-smell.config.mjs --fail-on none",
+    "build": "tsc -p tsconfig.json",
+    "check": "npm run build --silent && node ./bin/i18n-smell-detector.js check --config ./examples/vue-vite/i18n-smell.config.mjs --fail-on none",
+    "check:identical": "npm run build --silent && node ./bin/i18n-smell-detector.js check-identical --config ./examples/vue-vite/i18n-smell.config.mjs --fail-on none",
+    "check:hardcoded": "npm run build --silent && node ./bin/i18n-smell-detector.js check-hardcoded --config ./examples/vue-vite/i18n-smell.config.mjs --fail-on none",
+    "example:basic": "npm run build --silent && node ./bin/i18n-smell-detector.js check --config ./examples/basic/i18n-smell.config.mjs --fail-on none",
     "audit": "npm audit --audit-level=moderate",
-    "check:package": "node ./scripts/check-package.js",
+    "benchmark": "npm run build --silent && tsx ./scripts/benchmark.ts",
+    "check:package": "tsx ./scripts/check-package.ts",
+    "format:check": "prettier --check \"**/*.{ts,js,json,md,yml}\"",
+    "build:types": "tsc -p tsconfig.types.json",
+    "prepack": "npm run build",
     "release": "semantic-release",
     "release:dry-run": "semantic-release --dry-run",
-    "test": "node --test"
+    "typecheck": "npm run build --silent && tsc -p tsconfig.check.json",
+    "test": "npm run build --silent && tsx --test test/*.test.ts"
   },
   "keywords": [
     "i18n",
@@ -52,6 +65,10 @@
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
-    "semantic-release": "^25.0.5"
+    "@types/node": "^18.19.130",
+    "prettier": "^3.9.5",
+    "semantic-release": "^25.0.5",
+    "tsx": "^4.23.0",
+    "typescript": "^7.0.2"
   }
 }

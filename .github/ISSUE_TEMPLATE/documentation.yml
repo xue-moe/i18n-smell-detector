@@ -1,7 +1,7 @@
 name: Documentation issue
 description: Report missing, confusing, or incorrect docs.
-title: "docs: "
-labels: ["documentation"]
+title: 'docs: '
+labels: ['documentation']
 body:
   - type: textarea
     id: page

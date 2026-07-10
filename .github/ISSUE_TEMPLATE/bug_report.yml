@@ -1,7 +1,7 @@
 name: Bug report
 description: Report incorrect behavior or a crash.
-title: "bug: "
-labels: ["bug"]
+title: 'bug: '
+labels: ['bug']
 body:
   - type: markdown
     attributes:
@@ -12,14 +12,14 @@ body:
     attributes:
       label: Version
       description: Share the installed package version from package.json, npm, or your lockfile.
-      placeholder: "0.4.0"
+      placeholder: '0.4.0'
   - type: textarea
     id: command
     attributes:
       label: Command
       description: Which command did you run?
       render: bash
-      placeholder: "npx i18n-smell-detector check --config i18n-smell.config.mjs"
+      placeholder: 'npx i18n-smell-detector check --config i18n-smell.config.mjs'
     validations:
       required: true
   - type: textarea
@@ -53,4 +53,4 @@ body:
     attributes:
       label: Environment
       description: Node.js version, OS, package manager, and framework details.
-      placeholder: "Node 22, npm 10, macOS, Vue 3"
+      placeholder: 'Node 22, npm 10, macOS, Vue 3'
