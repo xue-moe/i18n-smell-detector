@@ -51,6 +51,27 @@ test('help command prints usage successfully', () => {
   assert.equal(result.stderr, '');
 });
 
+test('version options print the package version without requiring config', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-version-'));
+
+  try {
+    const packageJson = JSON.parse(await readFile(path.resolve('package.json'), 'utf8')) as { version: string };
+
+    for (const option of ['--version', '-V']) {
+      const result = spawnSync(process.execPath, [bin, option], {
+        cwd: tempDir,
+        encoding: 'utf8',
+      });
+
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(result.stdout, `${packageJson.version}\n`);
+      assert.equal(result.stderr, '');
+    }
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
 test('init creates a starter config without overwriting existing files', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-init-'));
 

@@ -1,4 +1,5 @@
 import { access, mkdir, readdir, writeFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { Command, InvalidArgumentError } from 'commander';
 import { applyBaseline, loadBaseline, writeBaseline } from './baseline.js';
@@ -17,6 +18,9 @@ import type {
   ReportFormat,
   ReportOptions,
 } from './types.js';
+
+const require = createRequire(import.meta.url);
+const packageVersion = (require('../package.json') as { version: string }).version;
 
 const HELP = `
 i18n-smell-detector
@@ -38,6 +42,7 @@ Options:
   --include-ignored         Print ignored matches as well
   --debug                   Print stack traces for runtime/configuration errors
   --force                   Overwrite an existing config file with init
+  -V, --version             Print version
   -h, --help                Show help
 
 Example:
@@ -77,6 +82,7 @@ type ParsedOptions = {
   includeIgnored: boolean;
   debug: boolean;
   force: boolean;
+  version: boolean;
   help: boolean;
 };
 
@@ -105,6 +111,7 @@ function parseArgs(argv: string[]): ParsedOptions {
     .option('--include-ignored', 'Print ignored matches as well', false)
     .option('--debug', 'Print stack traces for runtime/configuration errors', false)
     .option('--force', 'Overwrite an existing config file with init', false)
+    .option('-V, --version', 'Print version', false)
     .addHelpText(
       'after',
       `
@@ -133,15 +140,11 @@ Example:
         includeIgnored: false,
         debug: false,
         force: false,
+        version: false,
         help: true,
       };
     }
     throw appError(formatCommanderError(commanderError), 'CLI_USAGE');
-  }
-
-  const [command] = program.args;
-  if (!isCommandName(command)) {
-    throw appError(`Unknown command: ${command}\n${HELP}`, 'CLI_USAGE');
   }
 
   const opts = program.opts<{
@@ -154,7 +157,12 @@ Example:
     includeIgnored: boolean;
     debug: boolean;
     force: boolean;
+    version: boolean;
   }>();
+  const command = program.args[0] ?? 'check-identical';
+  if (!isCommandName(command)) {
+    throw appError(`Unknown command: ${command}\n${HELP}`, 'CLI_USAGE');
+  }
 
   return {
     command,
@@ -167,6 +175,7 @@ Example:
     includeIgnored: opts.includeIgnored,
     debug: opts.debug,
     force: opts.force,
+    version: opts.version,
     help: false,
   };
 }
@@ -210,6 +219,11 @@ function extractQuotedValue(value: string): string | undefined {
 
 export async function runCli(argv: string[]): Promise<void> {
   const options = parseArgs(argv);
+
+  if (options.version) {
+    console.log(packageVersion);
+    return;
+  }
 
   if (options.help || options.command === 'help') {
     console.log(HELP.trim());
