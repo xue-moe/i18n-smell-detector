@@ -19,7 +19,6 @@ const DEFAULT_PLACEHOLDER_PATTERNS = [
   String.raw`(?<!\{)\{[^{}]+\}(?!\})`,
   String.raw`%[sdif]`,
   String.raw`%\([^)]+\)[sdif]`,
-  String.raw`\$\d+`,
 ];
 
 const DEFAULT_HARDCODED_ATTRIBUTES = ['placeholder', 'title', 'alt', 'aria-label', 'aria-description'];

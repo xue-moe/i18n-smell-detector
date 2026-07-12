@@ -47,12 +47,11 @@ test('loadConfig applies documented defaults', async () => {
         String.raw`%\([^)]+\)[sdif]`,
         String.raw`\{\{[^}]+\}\}`,
         String.raw`%[sdif]`,
-        String.raw`\$\d+`,
       ],
     );
     assert.deepEqual(
       config.placeholderPatterns.map((pattern) => pattern.flags),
-      ['g', 'g', 'g', 'g', 'g'],
+      ['g', 'g', 'g', 'g'],
     );
   } finally {
     await rm(tempDir, { recursive: true, force: true });

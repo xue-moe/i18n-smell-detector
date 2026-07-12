@@ -18,14 +18,28 @@ test('extractPlaceholders supports common placeholder styles', async () => {
   const { config, tempDir } = await loadDefaultConfig();
 
   try {
-    assert.deepEqual(extractPlaceholders('Hello {name} {{ count }} %s %d %(item)s $1', config.placeholderPatterns), [
-      '$1',
+    assert.deepEqual(extractPlaceholders('Hello {name} {{ count }} %s %d %(item)s', config.placeholderPatterns), [
       '%(item)s',
       '%d',
       '%s',
       '{name}',
       '{{ count }}',
     ]);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('dollar-number placeholders are opt-in to avoid matching currency', async () => {
+  const { config, tempDir } = await loadDefaultConfig();
+
+  try {
+    for (const value of ['$1', '$10', '$10.50', '$1,000']) {
+      assert.deepEqual(extractPlaceholders(value, config.placeholderPatterns), []);
+    }
+
+    const explicitPatterns = [/\$\d+/g];
+    assert.deepEqual(extractPlaceholders('$1', explicitPatterns), ['$1']);
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
