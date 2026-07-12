@@ -38,3 +38,15 @@ test('loadConfig normalizes hardcoded ignore patterns', async () => {
     await rm(tempDir, { recursive: true, force: true });
   }
 });
+
+test('loadConfig rejects unknown hardcoded options', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-config-'));
+  const configPath = path.join(tempDir, 'i18n-smell.config.mjs');
+
+  try {
+    await writeFile(configPath, 'export default { hardcoded: { typoNestedOption: true } };');
+    await assert.rejects(() => loadConfig(configPath), /Unknown configuration option: hardcoded\.typoNestedOption/);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});

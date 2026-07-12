@@ -99,6 +99,22 @@ test('loadConfig rejects non-boolean check toggles', async () => {
   }
 });
 
+test('loadConfig rejects unknown top-level and check options', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-config-'));
+  const topLevelConfigPath = path.join(tempDir, 'unknown-top-level.config.mjs');
+  const checkConfigPath = path.join(tempDir, 'unknown-check.config.mjs');
+
+  try {
+    await writeFile(topLevelConfigPath, 'export default { typoOption: true };');
+    await assert.rejects(() => loadConfig(topLevelConfigPath), /Unknown configuration option: typoOption/);
+
+    await writeFile(checkConfigPath, 'export default { checks: { typoCheck: true } };');
+    await assert.rejects(() => loadConfig(checkConfigPath), /Unknown configuration option: checks\.typoCheck/);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
 test('loadConfig supports recommended and strict presets', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-config-'));
   const strictConfigPath = path.join(tempDir, 'strict.config.mjs');

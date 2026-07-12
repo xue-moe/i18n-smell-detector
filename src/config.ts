@@ -39,6 +39,35 @@ const BOOLEAN_OPTIONS = [
 const CHECK_NAMES = ['identical', 'hardcoded', 'placeholders'] as const;
 const REPORT_FORMATS = ['console', 'json', 'markdown', 'sarif', 'html'] as const;
 const PRESETS = ['recommended', 'strict'] as const;
+const CONFIG_KEYS = new Set([
+  'baseLocale',
+  'locales',
+  'allowIdenticalKeys',
+  'allowIdenticalValues',
+  'placeholderPatterns',
+  'source',
+  'hardcoded',
+  'checks',
+  'format',
+  'output',
+  'baseline',
+  'ignoreCodeLike',
+  'ignoreSameLanguageFamily',
+  'trimWhitespace',
+  'ignoreCase',
+  'includeIgnored',
+  'failOn',
+  'preset',
+]);
+const CHECK_KEYS = new Set<string>(CHECK_NAMES);
+const HARDCODED_KEYS = new Set([
+  'vueAttributes',
+  'jsxAttributes',
+  'functions',
+  'ignoreFiles',
+  'ignoreValues',
+  'ignorePatterns',
+]);
 
 async function exists(filePath: string): Promise<boolean> {
   try {
@@ -91,6 +120,8 @@ function validateConfig(config: unknown): asserts config is DetectorConfigInput 
   }
 
   const candidate = config as Record<string, unknown>;
+  assertKnownKeys(candidate, CONFIG_KEYS, '');
+
   if ('baseLocale' in candidate && (typeof candidate.baseLocale !== 'string' || !candidate.baseLocale)) {
     throw appError('Config baseLocale must be a non-empty string', 'CONFIG_INVALID');
   }
@@ -141,6 +172,7 @@ function validateConfig(config: unknown): asserts config is DetectorConfigInput 
   }
 
   const checks = (candidate.checks || {}) as Record<string, unknown>;
+  assertKnownKeys(checks, CHECK_KEYS, 'checks');
   for (const check of CHECK_NAMES) {
     if (check in checks && typeof checks[check] !== 'boolean') {
       throw appError(`Config checks.${check} must be a boolean`, 'CONFIG_INVALID');
@@ -177,6 +209,7 @@ function validateConfig(config: unknown): asserts config is DetectorConfigInput 
   }
 
   const hardcoded = (candidate.hardcoded || {}) as Record<string, unknown>;
+  assertKnownKeys(hardcoded, HARDCODED_KEYS, 'hardcoded');
   if ('vueAttributes' in hardcoded && !isStringArray(hardcoded.vueAttributes)) {
     throw appError('Config hardcoded.vueAttributes must be an array of strings', 'CONFIG_INVALID');
   }
@@ -191,6 +224,15 @@ function validateConfig(config: unknown): asserts config is DetectorConfigInput 
   }
   validateRuleList(hardcoded.ignoreValues, 'hardcoded.ignoreValues');
   validateRuleList(hardcoded.ignorePatterns, 'hardcoded.ignorePatterns');
+}
+
+function assertKnownKeys(value: Record<string, unknown>, allowedKeys: ReadonlySet<string>, path: string): void {
+  for (const key of Object.keys(value)) {
+    if (!allowedKeys.has(key)) {
+      const option = path ? `${path}.${key}` : key;
+      throw appError(`Unknown configuration option: ${option}`, 'CONFIG_INVALID');
+    }
+  }
 }
 
 function withDefaults(config: DetectorConfigInput): DetectorConfig {
