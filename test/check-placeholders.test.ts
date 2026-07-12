@@ -83,3 +83,44 @@ test('checkPlaceholders reports missing and extra target placeholders', async ()
     await rm(tempDir, { recursive: true, force: true });
   }
 });
+
+test('checkPlaceholders compares placeholder occurrence counts', async () => {
+  const { config, tempDir } = await loadDefaultConfig();
+
+  try {
+    const issues = checkPlaceholders(
+      {
+        en: {
+          printfMissing: '%s of %s items',
+          namedMissing: '{name} invited {name}',
+          reordered: '{first} then {second}',
+          printfExtra: '%s items',
+          mixedCounts: '{name} has %s of %s items',
+        },
+        zh: {
+          printfMissing: '%s items',
+          namedMissing: '{name} invited',
+          reordered: '{second}, then {first}',
+          printfExtra: '%s of %s items',
+          mixedCounts: '{name} met {name} with %s items',
+        },
+      },
+      {
+        ...config,
+        baseLocale: 'en',
+      },
+    );
+
+    assert.deepEqual(
+      issues.map(({ key, missing, extra }) => ({ key, missing, extra })),
+      [
+        { key: 'mixedCounts', missing: ['%s'], extra: ['{name}'] },
+        { key: 'namedMissing', missing: ['{name}'], extra: [] },
+        { key: 'printfMissing', missing: ['%s'], extra: [] },
+        { key: 'printfExtra', missing: [], extra: ['%s'] },
+      ],
+    );
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
