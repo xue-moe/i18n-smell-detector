@@ -12,7 +12,7 @@ body:
     attributes:
       label: Version
       description: Share the installed package version from package.json, npm, or your lockfile.
-      placeholder: '0.4.0'
+      placeholder: '0.7.2'
   - type: textarea
     id: command
     attributes:
@@ -32,8 +32,10 @@ body:
     id: input
     attributes:
       label: Minimal input
-      description: Share a small locale file or Vue template snippet.
-      render: json
+      description: |
+        Share a small locale file, Vue template, or JavaScript/TypeScript snippet.
+        Wrap the input in a fenced code block with the appropriate language,
+        such as `json`, `vue`, `js`, or `ts`.
   - type: textarea
     id: actual
     attributes:

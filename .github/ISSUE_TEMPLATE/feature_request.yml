@@ -29,9 +29,12 @@ body:
       options:
         - check-identical
         - check-hardcoded
+        - check-placeholders
+        - source-scanning
         - reporters
         - baseline
         - config
+        - CLI
         - CI/release
         - documentation
         - other
