@@ -1,3 +1,19 @@
+# [0.9.0](https://github.com/xue-moe/i18n-smell-detector/compare/v0.8.0...v0.9.0) (2026-07-13)
+
+
+### Bug Fixes
+
+* **config:** require effective do-not-translate rules ([51b9a81](https://github.com/xue-moe/i18n-smell-detector/commit/51b9a818a0b380e34c884433397b3c8b58d2e73d))
+
+
+### Features
+
+* **baseline:** add position-independent semantic fingerprints ([e9fab73](https://github.com/xue-moe/i18n-smell-detector/commit/e9fab73ba675ce4f41556e89a5858bf6d91ae47b))
+* **hardcoded:** classify technical values using source context ([2cb1b06](https://github.com/xue-moe/i18n-smell-detector/commit/2cb1b06e3b76d436c50f5b93be76be571c44280c))
+* **hardcoded:** report interpolated template messages ([b893bb6](https://github.com/xue-moe/i18n-smell-detector/commit/b893bb627e01b931734ecb468c58e937f7d084a4))
+* **hardcoded:** scan nested expressions in configured sinks ([a44c9d1](https://github.com/xue-moe/i18n-smell-detector/commit/a44c9d1763448d8582a6449b8145f8ae6ee1e509))
+* **identical:** add categorized do-not-translate rules ([9533763](https://github.com/xue-moe/i18n-smell-detector/commit/9533763cef8ea0d76dce69a665b510438e26fb5c))
+
 # [0.8.0](https://github.com/xue-moe/i18n-smell-detector/compare/v0.7.2...v0.8.0) (2026-07-13)
 
 

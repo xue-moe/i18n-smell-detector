@@ -1,6 +1,6 @@
 {
   "name": "i18n-smell-detector",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Find copied locale values, placeholder mismatches, and hardcoded user-visible strings.",
   "type": "module",
   "bin": {
