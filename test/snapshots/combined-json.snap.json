@@ -54,7 +54,12 @@
       "nodeType": "Text",
       "parentNodeType": "Element",
       "containsInterpolation": false,
-      "id": "hardcoded:v2:fa37fd9f79de1da14051"
+      "contextHash": "031ada8157f7057f5d5e",
+      "relativeRange": {
+        "start": 4,
+        "end": 20
+      },
+      "id": "hardcoded:v3:ba2ceaa5db551ba38603"
     },
     {
       "check": "hardcoded",
@@ -80,7 +85,12 @@
       "nodeType": "Attribute",
       "parentNodeType": "Element",
       "containsInterpolation": false,
-      "id": "hardcoded:v2:acb57939d25ad79e1f30"
+      "contextHash": "1e934c6ad6236e46aaa3",
+      "relativeRange": {
+        "start": 19,
+        "end": 27
+      },
+      "id": "hardcoded:v3:6ba58e30ba96caffb4e5"
     },
     {
       "check": "hardcoded",
@@ -106,7 +116,12 @@
       "nodeType": "Text",
       "parentNodeType": "Element",
       "containsInterpolation": false,
-      "id": "hardcoded:v2:1c694313e7f21baf72bf"
+      "contextHash": "3f86a70c2f3bbae22722",
+      "relativeRange": {
+        "start": 8,
+        "end": 12
+      },
+      "id": "hardcoded:v3:0247c826049b96d9b3b6"
     }
   ]
 }

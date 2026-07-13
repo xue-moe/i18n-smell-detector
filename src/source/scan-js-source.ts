@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { parse } from '@babel/parser';
 import { classifyHardcoded } from '../rules/classify-hardcoded.js';
 import type { HardcodedConfig, HardcodedIssue, SourceRange } from '../types.js';
-import { rangeFromOffsets } from './source-range.js';
+import { rangeFromOffsets, sourceAnchor } from './source-range.js';
 import { extractMessageCandidates, type MessageNode } from './extract-message-candidates.js';
 
 type HardcodedScanConfig = { hardcoded: Partial<HardcodedConfig> };
@@ -48,7 +48,7 @@ function makeIssue({
   sourceOffset,
   lineOffset,
   node,
-  parentNodeType,
+  parentNode,
   value,
   kind,
   baseReason,
@@ -60,7 +60,7 @@ function makeIssue({
   sourceOffset: number;
   lineOffset: number;
   node: AstNode | null | undefined;
-  parentNodeType?: string;
+  parentNode?: AstNode;
   value: string;
   kind: string;
   baseReason: string;
@@ -71,6 +71,7 @@ function makeIssue({
   if (!text || !range) return null;
 
   const classification = classifyHardcoded(text, config);
+  const anchor = anchorFor(source, node, parentNode);
   return {
     file,
     line: range.start.line,
@@ -81,8 +82,9 @@ function makeIssue({
     kind,
     range,
     nodeType: node?.type,
-    parentNodeType,
+    parentNodeType: parentNode?.type,
     containsInterpolation: node?.type === 'TemplateLiteral' && asArray(node.expressions).length > 0,
+    ...anchor,
   };
 }
 
@@ -146,6 +148,9 @@ export function scanJsText(
       const text = normalizeText(candidate.value);
       if (!text) continue;
       const classification = classifyHardcoded(text, config);
+      const childStart = (candidate.range.start.offset ?? sourceOffset) - (fileSource ? sourceOffset : 0);
+      const childEnd = (candidate.range.end.offset ?? sourceOffset) - (fileSource ? sourceOffset : 0);
+      const anchor = anchorForOffsets(source, parentNode, childStart, childEnd);
       issues.push({
         file,
         line: candidate.range.start.line + (!fileSource ? lineOffset : 0),
@@ -160,6 +165,7 @@ export function scanJsText(
         nodeType: candidate.nodeType,
         parentNodeType: parentNode.type,
         containsInterpolation: candidate.containsInterpolation,
+        ...anchor,
       });
     }
   };
@@ -202,7 +208,7 @@ export function scanJsText(
         sourceOffset,
         lineOffset,
         node,
-        parentNodeType: parent?.type,
+        parentNode: parent,
         value: stringField(node, 'value'),
         kind: 'jsx-text',
         baseReason: 'static JSX text',
@@ -224,7 +230,7 @@ export function scanJsText(
         sourceOffset,
         lineOffset,
         node: valueNode,
-        parentNodeType: node.type,
+        parentNode: node,
         value,
         kind: `jsx-attribute:${jsxName(node.name)}`,
         baseReason: `static ${jsxName(node.name)} attribute`,
@@ -235,6 +241,21 @@ export function scanJsText(
   });
 
   return issues;
+}
+
+function anchorFor(source: string, node?: AstNode | null, parent?: AstNode): ReturnType<typeof sourceAnchor> | {} {
+  if (!node || !parent || typeof node.start !== 'number' || typeof node.end !== 'number') return {};
+  return anchorForOffsets(source, parent, node.start, node.end);
+}
+
+function anchorForOffsets(
+  source: string,
+  parent: AstNode,
+  childStart: number,
+  childEnd: number,
+): ReturnType<typeof sourceAnchor> | {} {
+  if (typeof parent.start !== 'number' || typeof parent.end !== 'number') return {};
+  return sourceAnchor(source, parent.start, parent.end, childStart, childEnd);
 }
 
 function walk(node: unknown, visitor: (node: AstNode, parent?: AstNode) => void, parent?: AstNode): void {

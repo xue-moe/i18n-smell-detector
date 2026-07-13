@@ -2,7 +2,7 @@ import { NodeTypes, parse } from '@vue/compiler-dom';
 import { classifyHardcoded } from '../rules/classify-hardcoded.js';
 import type { HardcodedConfig, HardcodedIssue, Severity, SourceRange } from '../types.js';
 import { scanExpressionStrings } from './scan-expression-strings.js';
-import { rangeFromOffsets } from './source-range.js';
+import { rangeFromOffsets, sourceAnchor } from './source-range.js';
 
 type HardcodedScanConfig = { hardcoded: Partial<HardcodedConfig> };
 
@@ -53,6 +53,7 @@ function makeIssue({
   nodeType,
   parentNodeType,
   containsInterpolation,
+  contextLoc,
 }: {
   file: string;
   lineOffset: number;
@@ -67,8 +68,12 @@ function makeIssue({
   nodeType: string;
   parentNodeType?: string;
   containsInterpolation: boolean;
+  contextLoc?: VueLocation;
 }): HardcodedIssue {
   const range = resolveRange(template, loc, { fileSource, sourceOffset, lineOffset });
+  const anchor = contextLoc
+    ? sourceAnchor(template, contextLoc.start.offset, contextLoc.end.offset, loc.start.offset, loc.end.offset)
+    : {};
   return {
     file,
     line: range.start.line,
@@ -81,6 +86,7 @@ function makeIssue({
     nodeType,
     parentNodeType,
     containsInterpolation,
+    ...anchor,
   };
 }
 
@@ -98,6 +104,7 @@ function scanValue({
   nodeType,
   parentNodeType,
   containsInterpolation = false,
+  contextLoc,
 }: {
   file: string;
   lineOffset: number;
@@ -112,6 +119,7 @@ function scanValue({
   nodeType: string;
   parentNodeType?: string;
   containsInterpolation?: boolean;
+  contextLoc?: VueLocation;
 }): HardcodedIssue | null {
   const text = normalizeText(value);
   if (!text) return null;
@@ -131,6 +139,7 @@ function scanValue({
     nodeType,
     parentNodeType,
     containsInterpolation,
+    contextLoc,
   });
 }
 
@@ -181,6 +190,7 @@ export function scanVueTemplate(
         config,
         nodeType: vueNodeType(node.type),
         parentNodeType: parent ? vueNodeType(parent.type) : undefined,
+        contextLoc: parent?.loc,
       });
       if (issue) issues.push(issue);
       return;
@@ -194,6 +204,7 @@ export function scanVueTemplate(
         fileSource,
         sourceOffset,
         lineOffset,
+        contextLoc: node.loc,
         kind: 'vue-interpolation',
         baseReason: 'static string in Vue interpolation',
         config,
@@ -214,6 +225,7 @@ export function scanVueTemplate(
           fileSource,
           sourceOffset,
           lineOffset,
+          contextLoc: prop.loc,
           kind: `vue-bind:${attribute}`,
           baseReason: `static string in bound ${attribute} attribute`,
           config,
@@ -239,6 +251,7 @@ export function scanVueTemplate(
         config,
         nodeType: vueNodeType(prop.type),
         parentNodeType: vueNodeType(node.type),
+        contextLoc: node.loc,
       });
       if (issue) issues.push(issue);
     }
@@ -254,6 +267,7 @@ function scanVueExpression({
   fileSource,
   sourceOffset,
   lineOffset,
+  contextLoc,
   kind,
   baseReason,
   config,
@@ -265,6 +279,7 @@ function scanVueExpression({
   fileSource?: string;
   sourceOffset: number;
   lineOffset: number;
+  contextLoc: VueLocation;
   kind: string;
   baseReason: string;
   config: HardcodedScanConfig;
@@ -294,6 +309,9 @@ function scanVueExpression({
             end: { ...finding.range.end, line: finding.range.end.line + lineOffset },
           }
         : finding.range;
+    const childStart = (range.start.offset ?? sourceOffset) - sourceOffset;
+    const childEnd = (range.end.offset ?? sourceOffset) - sourceOffset;
+    const anchor = sourceAnchor(template, contextLoc.start.offset, contextLoc.end.offset, childStart, childEnd);
     issues.push({
       file,
       line: range.start.line,
@@ -308,6 +326,7 @@ function scanVueExpression({
       containsInterpolation: finding.containsInterpolation,
       rawValue: finding.rawValue,
       interpolations: finding.interpolations,
+      ...anchor,
     });
   }
 }

@@ -23,6 +23,8 @@ type BaselineIssue = {
   nodeType?: string;
   parentNodeType?: string;
   containsInterpolation?: boolean;
+  contextHash?: string;
+  relativeRange?: HardcodedIssue['relativeRange'];
 };
 
 function errorCode(error: unknown): string | undefined {
@@ -41,17 +43,16 @@ export function issueId(check: CustomCheckName, issue: DetectorIssue): string {
   const hardcodedIssue = issue as HardcodedIssue;
   const fingerprint = JSON.stringify({
     file: hardcodedIssue.file.replaceAll('\\', '/'),
+    check: 'hardcoded',
     kind: hardcodedIssue.kind,
     nodeType: hardcodedIssue.nodeType,
     parentNodeType: hardcodedIssue.parentNodeType,
     containsInterpolation: hardcodedIssue.containsInterpolation || false,
     value: normalizeFindingValue(hardcodedIssue.value),
-    range: hardcodedIssue.range || {
-      start: { line: hardcodedIssue.line, column: hardcodedIssue.column },
-    },
+    contextHash: hardcodedIssue.contextHash,
   });
   const digest = createHash('sha256').update(fingerprint).digest('hex').slice(0, 20);
-  return `hardcoded:v2:${digest}`;
+  return `hardcoded:v3:${digest}`;
 }
 
 export async function loadBaseline(filePath: string | undefined): Promise<Set<string>> {
@@ -69,7 +70,7 @@ export async function loadBaseline(filePath: string | undefined): Promise<Set<st
     throw new Error(`Invalid baseline file: ${filePath}`);
   }
   const version = (parsed as { version?: unknown }).version;
-  if (version !== undefined && version !== 1 && version !== 2) {
+  if (version !== undefined && version !== 1 && version !== 2 && version !== 3) {
     throw new Error(`Unsupported baseline version in ${filePath}: ${String(version)}`);
   }
 
@@ -86,7 +87,8 @@ export function applyBaseline(results: CheckResult[], ids: Set<string>): CheckRe
     issues: result.issues.map((issue) => {
       const id = issueId(result.check, issue);
       const legacyId = legacyIssueId(result.check, issue);
-      if (!ids.has(id) && !ids.has(legacyId)) return { ...issue, id };
+      const version2Id = v2IssueId(result.check, issue);
+      if (!ids.has(id) && !ids.has(version2Id) && !ids.has(legacyId)) return { ...issue, id };
       return { ...issue, id, severity: 'ignored', reason: 'baseline' };
     }),
   }));
@@ -103,7 +105,7 @@ export async function writeBaseline(filePath: string, results: CheckResult[]): P
   }
 
   await mkdir(path.dirname(filePath), { recursive: true });
-  await writeFile(filePath, `${JSON.stringify({ version: 2, issues }, null, 2)}\n`);
+  await writeFile(filePath, `${JSON.stringify({ version: 3, issues }, null, 2)}\n`);
   return issues.length;
 }
 
@@ -133,7 +135,24 @@ function toBaselineIssue(check: CustomCheckName, issue: DetectorIssue): Baseline
     nodeType: hardcodedIssue.nodeType,
     parentNodeType: hardcodedIssue.parentNodeType,
     containsInterpolation: hardcodedIssue.containsInterpolation,
+    contextHash: hardcodedIssue.contextHash,
+    relativeRange: hardcodedIssue.relativeRange,
   };
+}
+
+function v2IssueId(check: CustomCheckName, issue: DetectorIssue): string {
+  if (!isHardcodedIssue(issue) && (check === 'identical' || check === 'placeholders')) return issueId(check, issue);
+  const hardcodedIssue = issue as HardcodedIssue;
+  const fingerprint = JSON.stringify({
+    file: hardcodedIssue.file.replaceAll('\\', '/'),
+    kind: hardcodedIssue.kind,
+    nodeType: hardcodedIssue.nodeType,
+    parentNodeType: hardcodedIssue.parentNodeType,
+    containsInterpolation: hardcodedIssue.containsInterpolation || false,
+    value: normalizeFindingValue(hardcodedIssue.value),
+    range: hardcodedIssue.range || { start: { line: hardcodedIssue.line, column: hardcodedIssue.column } },
+  });
+  return `hardcoded:v2:${createHash('sha256').update(fingerprint).digest('hex').slice(0, 20)}`;
 }
 
 function legacyIssueId(check: CustomCheckName, issue: DetectorIssue): string {

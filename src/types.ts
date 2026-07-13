@@ -105,6 +105,8 @@ export interface HardcodedIssue {
   containsInterpolation?: boolean;
   rawValue?: string;
   interpolations?: MessageInterpolation[];
+  contextHash?: string;
+  relativeRange?: { start: number; end: number };
 }
 
 export interface PlaceholderIssue {

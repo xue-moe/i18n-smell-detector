@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 
 const bin = path.resolve('bin/i18n-smell-detector.js');
 
@@ -12,6 +13,12 @@ type JsonIssue = {
   value?: string;
   check?: string;
   reason?: string;
+  file?: string;
+  kind?: string;
+  nodeType?: string;
+  parentNodeType?: string;
+  containsInterpolation?: boolean;
+  range?: unknown;
 };
 
 type JsonIssueFile = {
@@ -86,9 +93,9 @@ test('baseline update writes current issues', async () => {
 
     assert.equal(result.status, 0);
     const parsed = parseIssuesJson(await readFile(baseline, 'utf8'));
-    assert.equal(parsed.version, 2);
+    assert.equal(parsed.version, 3);
     assert.ok(parsed.issues.some((issue) => issue.id === 'identical:zh:home.title'));
-    assert.ok(parsed.issues.some((issue) => issue.id?.startsWith('hardcoded:v2:')));
+    assert.ok(parsed.issues.some((issue) => issue.id?.startsWith('hardcoded:v3:')));
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
@@ -242,7 +249,7 @@ test('stale baseline issues disappear when baseline is updated', async () => {
   }
 });
 
-test('baseline fingerprints distinguish source position changes', async () => {
+test('baseline fingerprints survive source position changes', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-baseline-'));
   const baseline = path.join(tempDir, 'baseline.json');
 
@@ -259,7 +266,7 @@ test('baseline fingerprints distinguish source position changes', async () => {
     assert.equal(update.status, 0, update.stderr);
     const before = parseIssuesJson(await readFile(baseline, 'utf8')).issues.find((issue) => issue.value === 'Save');
     assert.ok(before);
-    assert.ok(before.id?.startsWith('hardcoded:v2:'));
+    assert.ok(before.id?.startsWith('hardcoded:v3:'));
 
     const componentPath = path.join(tempDir, 'src/components/UserPanel.vue');
     const component = await readFile(componentPath, 'utf8');
@@ -273,6 +280,7 @@ test('baseline fingerprints distinguish source position changes', async () => {
       baseline,
       '--format',
       'json',
+      '--include-ignored',
       '--fail-on',
       'none',
     ]);
@@ -281,8 +289,8 @@ test('baseline fingerprints distinguish source position changes', async () => {
     const report = parseIssuesJson(result.stdout);
     const moved = report.issues.find((issue) => issue.check === 'hardcoded' && issue.value === 'Save');
     assert.ok(moved);
-    assert.notEqual(moved.id, before.id);
-    assert.notEqual(moved.reason, 'baseline');
+    assert.equal(moved.id, before.id);
+    assert.equal(moved.reason, 'baseline');
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
@@ -323,6 +331,56 @@ test('version 1 hardcoded baseline ids remain compatible', async () => {
     assert.equal(result.status, 0, result.stderr);
     const report = parseIssuesJson(result.stdout);
     assert.ok(report.issues.some((issue) => issue.value === 'Save' && issue.reason === 'baseline'));
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('version 2 contextual baseline ids remain compatible', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-baseline-'));
+  const baseline = path.join(tempDir, 'baseline.json');
+
+  try {
+    await writeBasicProject(tempDir);
+    const initial = run([
+      'check',
+      '--config',
+      path.join(tempDir, 'i18n-smell.config.mjs'),
+      '--format',
+      'json',
+      '--fail-on',
+      'none',
+    ]);
+    const save = parseIssuesJson(initial.stdout).issues.find((issue) => issue.value === 'Save');
+    assert.ok(save);
+    const fingerprint = JSON.stringify({
+      file: save.file,
+      kind: save.kind,
+      nodeType: save.nodeType,
+      parentNodeType: save.parentNodeType,
+      containsInterpolation: save.containsInterpolation || false,
+      value: save.value,
+      range: save.range,
+    });
+    const id = `hardcoded:v2:${createHash('sha256').update(fingerprint).digest('hex').slice(0, 20)}`;
+    await writeFile(baseline, JSON.stringify({ version: 2, issues: [{ id, value: 'Save' }] }));
+
+    const result = run([
+      'check',
+      '--config',
+      path.join(tempDir, 'i18n-smell.config.mjs'),
+      '--baseline',
+      baseline,
+      '--format',
+      'json',
+      '--include-ignored',
+      '--fail-on',
+      'none',
+    ]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.ok(
+      parseIssuesJson(result.stdout).issues.some((issue) => issue.value === 'Save' && issue.reason === 'baseline'),
+    );
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
