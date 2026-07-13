@@ -11,7 +11,7 @@ function escapeHtml(value: unknown): string {
 }
 
 function visibleIssues(result: CheckResult, includeIgnored: boolean): DetectorIssue[] {
-  return includeIgnored ? result.issues : result.issues.filter((issue: any) => issue.severity !== 'ignored');
+  return includeIgnored ? result.issues : result.issues.filter((issue) => issue.severity !== 'ignored');
 }
 
 function formatLocation(issue: DetectorIssue): string {

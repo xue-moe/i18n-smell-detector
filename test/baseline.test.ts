@@ -178,6 +178,29 @@ test('invalid baseline JSON fails clearly', async () => {
   }
 });
 
+test('unsupported baseline versions fail clearly', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-baseline-'));
+  const baseline = path.join(tempDir, 'baseline.json');
+
+  try {
+    await writeFile(baseline, JSON.stringify({ version: 99, issues: [] }));
+    const result = run([
+      'check',
+      '--config',
+      'examples/basic/i18n-smell.config.mjs',
+      '--baseline',
+      baseline,
+      '--fail-on',
+      'none',
+    ]);
+
+    assert.equal(result.status, 2);
+    assert.match(result.stderr, /Unsupported baseline version/);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
 test('stale baseline issues disappear when baseline is updated', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-baseline-'));
   const baseline = path.join(tempDir, 'baseline.json');

@@ -193,6 +193,7 @@ export function scanVueTemplate(
         template,
         fileSource,
         sourceOffset,
+        lineOffset,
         kind: 'vue-interpolation',
         baseReason: 'static string in Vue interpolation',
         config,
@@ -212,6 +213,7 @@ export function scanVueTemplate(
           template,
           fileSource,
           sourceOffset,
+          lineOffset,
           kind: `vue-bind:${attribute}`,
           baseReason: `static string in bound ${attribute} attribute`,
           config,
@@ -251,6 +253,7 @@ function scanVueExpression({
   template,
   fileSource,
   sourceOffset,
+  lineOffset,
   kind,
   baseReason,
   config,
@@ -261,6 +264,7 @@ function scanVueExpression({
   template: string;
   fileSource?: string;
   sourceOffset: number;
+  lineOffset: number;
   kind: string;
   baseReason: string;
   config: HardcodedScanConfig;
@@ -283,15 +287,22 @@ function scanVueExpression({
     const text = normalizeText(finding.value);
     if (!text) continue;
     const classification = classifyHardcoded(text, config);
+    const range =
+      !fileSource && lineOffset
+        ? {
+            start: { ...finding.range.start, line: finding.range.start.line + lineOffset },
+            end: { ...finding.range.end, line: finding.range.end.line + lineOffset },
+          }
+        : finding.range;
     issues.push({
       file,
-      line: finding.range.start.line,
-      column: finding.range.start.column,
+      line: range.start.line,
+      column: range.start.column,
       value: text,
       severity: classification.severity,
       reason: classification.severity === 'ignored' ? classification.reason : baseReason,
       kind,
-      range: finding.range,
+      range,
       nodeType: finding.nodeType,
       parentNodeType: finding.expressionKind,
       containsInterpolation: finding.containsInterpolation,

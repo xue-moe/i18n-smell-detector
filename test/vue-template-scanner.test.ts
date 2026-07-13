@@ -126,3 +126,15 @@ test('scanVueTemplate detects strings in interpolations and bound attributes', (
   assert.equal(hello?.containsInterpolation, true);
   assert.equal(hello?.nodeType, 'TemplateElement');
 });
+
+test('scanVueTemplate applies line offsets to expression findings', () => {
+  const [issue] = scanVueTemplate("<p>{{ ready ? 'Ready' : 'Waiting' }}</p>", {
+    file: 'Component.vue',
+    lineOffset: 7,
+    config,
+  });
+
+  assert.equal(issue.line, 8);
+  assert.equal(issue.range?.start.line, 8);
+  assert.equal(issue.range?.start.offset, 14);
+});

@@ -68,6 +68,10 @@ export async function loadBaseline(filePath: string | undefined): Promise<Set<st
   if (!parsed || typeof parsed !== 'object' || !Array.isArray((parsed as { issues?: unknown }).issues)) {
     throw new Error(`Invalid baseline file: ${filePath}`);
   }
+  const version = (parsed as { version?: unknown }).version;
+  if (version !== undefined && version !== 1 && version !== 2) {
+    throw new Error(`Unsupported baseline version in ${filePath}: ${String(version)}`);
+  }
 
   return new Set(
     (parsed as { issues: Array<{ id?: unknown }> }).issues

@@ -39,7 +39,22 @@
       "severity": "high",
       "reason": "static template text",
       "kind": "vue-text",
-      "id": "hardcoded:src/components/UserPanel.vue:3:9:Account settings"
+      "range": {
+        "start": {
+          "line": 3,
+          "column": 9,
+          "offset": 31
+        },
+        "end": {
+          "line": 3,
+          "column": 25,
+          "offset": 47
+        }
+      },
+      "nodeType": "Text",
+      "parentNodeType": "Element",
+      "containsInterpolation": false,
+      "id": "hardcoded:v2:fa37fd9f79de1da14051"
     },
     {
       "check": "hardcoded",
@@ -50,7 +65,22 @@
       "severity": "medium",
       "reason": "static placeholder attribute",
       "kind": "vue-attribute:placeholder",
-      "id": "hardcoded:src/components/UserPanel.vue:4:24:Search"
+      "range": {
+        "start": {
+          "line": 4,
+          "column": 24,
+          "offset": 76
+        },
+        "end": {
+          "line": 4,
+          "column": 32,
+          "offset": 84
+        }
+      },
+      "nodeType": "Attribute",
+      "parentNodeType": "Element",
+      "containsInterpolation": false,
+      "id": "hardcoded:v2:acb57939d25ad79e1f30"
     },
     {
       "check": "hardcoded",
@@ -61,7 +91,22 @@
       "severity": "medium",
       "reason": "static template text",
       "kind": "vue-text",
-      "id": "hardcoded:src/components/UserPanel.vue:5:13:Save"
+      "range": {
+        "start": {
+          "line": 5,
+          "column": 13,
+          "offset": 100
+        },
+        "end": {
+          "line": 5,
+          "column": 17,
+          "offset": 104
+        }
+      },
+      "nodeType": "Text",
+      "parentNodeType": "Element",
+      "containsInterpolation": false,
+      "id": "hardcoded:v2:1c694313e7f21baf72bf"
     }
   ]
 }
