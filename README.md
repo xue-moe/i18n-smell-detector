@@ -73,6 +73,21 @@ Common options:
 | `--update-baseline`   | Write current findings to the baseline file.       |
 | `--include-ignored`   | Include ignored findings in the report.            |
 | `--debug`             | Print stack traces for troubleshooting.            |
+| `-V, --version`       | Print the installed package version.               |
+
+Configure precise JavaScript and TypeScript message sinks when messages flow through application-specific APIs:
+
+```js
+export default {
+  hardcoded: {
+    sinks: {
+      calls: [{ callee: 'notify', arguments: [0] }],
+      assignments: ['error.value'],
+      properties: ['summary', 'detail'],
+    },
+  },
+};
+```
 
 ## Reports
 

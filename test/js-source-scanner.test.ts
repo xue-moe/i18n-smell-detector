@@ -78,6 +78,59 @@ test('scanJsText records complete source ranges and AST context', () => {
   assert.equal(issue.containsInterpolation, false);
 });
 
+test('scanJsText detects only explicitly configured call, assignment, and property sinks', () => {
+  const issues = scanJsText(
+    `
+      notify('Invalid input', 'debug metadata');
+      error.value = 'Network error';
+      other.value = 'Internal only';
+      toast.add({
+        summary: 'Invalid input',
+        detail: 'Enter a valid value.',
+        debug: 'Stack details'
+      });
+    `,
+    {
+      file: 'messages.ts',
+      config: {
+        hardcoded: {
+          functions: [],
+          jsxAttributes: [],
+          ignoreValues: [],
+          ignorePatterns: [],
+          sinks: {
+            calls: [{ callee: 'notify', arguments: [0] }],
+            assignments: ['error.value'],
+            properties: ['summary', 'detail'],
+          },
+        },
+      },
+    },
+  );
+
+  assert.deepEqual(
+    issues.map((issue) => [issue.kind, issue.value]),
+    [
+      ['js-call:notify', 'Invalid input'],
+      ['js-assignment:error.value', 'Network error'],
+      ['js-property:summary', 'Invalid input'],
+      ['js-property:detail', 'Enter a valid value.'],
+    ],
+  );
+  assert.equal(
+    issues.some((issue) => issue.value === 'debug metadata'),
+    false,
+  );
+  assert.equal(
+    issues.some((issue) => issue.value === 'Internal only'),
+    false,
+  );
+  assert.equal(
+    issues.some((issue) => issue.value === 'Stack details'),
+    false,
+  );
+});
+
 test('checkHardcodedStrings detects JSX text and static attributes', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-jsx-'));
 

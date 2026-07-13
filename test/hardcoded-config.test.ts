@@ -20,6 +20,41 @@ test('loadConfig applies hardcoded defaults', async () => {
     assert.deepEqual(config.hardcoded.ignoreFiles, []);
     assert.deepEqual(config.hardcoded.ignoreValues, []);
     assert.deepEqual(config.hardcoded.ignorePatterns, []);
+    assert.deepEqual(config.hardcoded.sinks, { calls: [], assignments: [], properties: [] });
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('loadConfig validates and normalizes configured message sinks', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-config-'));
+  const validPath = path.join(tempDir, 'valid-sinks.config.mjs');
+  const invalidPath = path.join(tempDir, 'invalid-sinks.config.mjs');
+
+  try {
+    await writeFile(
+      validPath,
+      `export default { hardcoded: { sinks: {
+        calls: [{ callee: 'notify', arguments: [0, 2] }],
+        assignments: ['error.value'],
+        properties: ['summary', 'detail']
+      } } };`,
+    );
+    const config = await loadConfig(validPath);
+    assert.deepEqual(config.hardcoded.sinks, {
+      calls: [{ callee: 'notify', arguments: [0, 2] }],
+      assignments: ['error.value'],
+      properties: ['summary', 'detail'],
+    });
+
+    await writeFile(
+      invalidPath,
+      `export default { hardcoded: { sinks: { calls: [{ callee: 'notify', arguments: [-1] }] } } };`,
+    );
+    await assert.rejects(
+      () => loadConfig(invalidPath),
+      /hardcoded\.sinks\.calls\[0\]\.arguments must be an array of non-negative integers/,
+    );
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

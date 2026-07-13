@@ -122,10 +122,23 @@ export function scanJsText(
   const issues: HardcodedIssue[] = [];
   const functions = new Set(config.hardcoded.functions || []);
   const jsxAttributes = new Set(config.hardcoded.jsxAttributes || []);
+  const assignmentSinks = new Set(config.hardcoded.sinks?.assignments || []);
+  const propertySinks = new Set(config.hardcoded.sinks?.properties || []);
+  const callSinks = new Map<string, Set<number>>();
+  for (const sink of config.hardcoded.sinks?.calls || []) {
+    const indexes = callSinks.get(sink.callee) || new Set<number>();
+    for (const index of sink.arguments) indexes.add(index);
+    callSinks.set(sink.callee, indexes);
+  }
 
   walk(ast, (node, parent) => {
-    if (node.type === 'CallExpression' && functions.has(calleeName(node.callee as AstNode))) {
-      for (const argument of asArray(node.arguments)) {
+    if (node.type === 'CallExpression') {
+      const callee = calleeName(node.callee as AstNode);
+      const selectedArguments = callSinks.get(callee);
+      const argumentsToScan = asArray(node.arguments);
+
+      for (const [index, argument] of argumentsToScan.entries()) {
+        if (!functions.has(callee) && !selectedArguments?.has(index)) continue;
         if (!isAstNode(argument)) continue;
         const value = staticString(argument);
         if (value === null) continue;
@@ -139,12 +152,60 @@ export function scanJsText(
           node: argument,
           parentNodeType: node.type,
           value,
-          kind: `js-call:${calleeName(node.callee as AstNode)}`,
-          baseReason: `static string passed to ${calleeName(node.callee as AstNode)}`,
+          kind: `js-call:${callee}`,
+          baseReason: `static string passed to ${callee}`,
           config,
         });
         if (issue) issues.push(issue);
       }
+      if (functions.has(callee) || selectedArguments) return;
+    }
+
+    if (node.type === 'AssignmentExpression') {
+      const target = calleeName(node.left as AstNode);
+      if (!assignmentSinks.has(target)) return;
+      const valueNode = node.right as AstNode | null | undefined;
+      const value = staticString(valueNode);
+      if (value === null) return;
+
+      const issue = makeIssue({
+        file,
+        source,
+        fileSource,
+        sourceOffset,
+        lineOffset,
+        node: valueNode,
+        parentNodeType: node.type,
+        value,
+        kind: `js-assignment:${target}`,
+        baseReason: `static string assigned to ${target}`,
+        config,
+      });
+      if (issue) issues.push(issue);
+      return;
+    }
+
+    if (node.type === 'ObjectProperty') {
+      const property = propertyName(node.key as AstNode, Boolean(node.computed));
+      if (!propertySinks.has(property)) return;
+      const valueNode = node.value as AstNode | null | undefined;
+      const value = staticString(valueNode);
+      if (value === null) return;
+
+      const issue = makeIssue({
+        file,
+        source,
+        fileSource,
+        sourceOffset,
+        lineOffset,
+        node: valueNode,
+        parentNodeType: node.type,
+        value,
+        kind: `js-property:${property}`,
+        baseReason: `static string in ${property} property`,
+        config,
+      });
+      if (issue) issues.push(issue);
       return;
     }
 
@@ -245,6 +306,12 @@ function calleeName(node: AstNode | null | undefined): string {
     return object && property ? `${object}.${property}` : '';
   }
   return '';
+}
+
+function propertyName(node: AstNode | null | undefined, computed: boolean): string {
+  if (!node) return '';
+  if (node.type === 'Identifier' && !computed) return stringField(node, 'name');
+  return staticString(node) || '';
 }
 
 function jsxName(node: unknown): string {

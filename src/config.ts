@@ -3,7 +3,14 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import { appError } from './errors.js';
-import type { DetectorConfig, DetectorConfigInput, FailOnLevel, HardcodedConfig, Rule } from './types.js';
+import type {
+  DetectorConfig,
+  DetectorConfigInput,
+  FailOnLevel,
+  HardcodedConfig,
+  HardcodedConfigInput,
+  Rule,
+} from './types.js';
 
 const require = createRequire(import.meta.url);
 
@@ -66,7 +73,10 @@ const HARDCODED_KEYS = new Set([
   'ignoreFiles',
   'ignoreValues',
   'ignorePatterns',
+  'sinks',
 ]);
+const SINK_KEYS = new Set(['calls', 'assignments', 'properties']);
+const CALL_SINK_KEYS = new Set(['callee', 'arguments']);
 
 async function exists(filePath: string): Promise<boolean> {
   try {
@@ -223,6 +233,41 @@ function validateConfig(config: unknown): asserts config is DetectorConfigInput 
   }
   validateRuleList(hardcoded.ignoreValues, 'hardcoded.ignoreValues');
   validateRuleList(hardcoded.ignorePatterns, 'hardcoded.ignorePatterns');
+
+  if ('sinks' in hardcoded && !isRecord(hardcoded.sinks)) {
+    throw appError('Config hardcoded.sinks must be an object', 'CONFIG_INVALID');
+  }
+  const sinks = (hardcoded.sinks || {}) as Record<string, unknown>;
+  assertKnownKeys(sinks, SINK_KEYS, 'hardcoded.sinks');
+  if ('assignments' in sinks && !isStringArray(sinks.assignments)) {
+    throw appError('Config hardcoded.sinks.assignments must be an array of strings', 'CONFIG_INVALID');
+  }
+  if ('properties' in sinks && !isStringArray(sinks.properties)) {
+    throw appError('Config hardcoded.sinks.properties must be an array of strings', 'CONFIG_INVALID');
+  }
+  const calls = sinks.calls;
+  if (calls !== undefined && !Array.isArray(calls)) {
+    throw appError('Config hardcoded.sinks.calls must be an array', 'CONFIG_INVALID');
+  }
+  for (const [index, call] of (Array.isArray(calls) ? calls : []).entries()) {
+    if (!isRecord(call)) {
+      throw appError(`Config hardcoded.sinks.calls[${index}] must be an object`, 'CONFIG_INVALID');
+    }
+    assertKnownKeys(call, CALL_SINK_KEYS, `hardcoded.sinks.calls[${index}]`);
+    if (typeof call.callee !== 'string' || !call.callee) {
+      throw appError(`Config hardcoded.sinks.calls[${index}].callee must be a non-empty string`, 'CONFIG_INVALID');
+    }
+    if (
+      !Array.isArray(call.arguments) ||
+      call.arguments.length === 0 ||
+      !call.arguments.every((value) => Number.isInteger(value) && Number(value) >= 0)
+    ) {
+      throw appError(
+        `Config hardcoded.sinks.calls[${index}].arguments must be an array of non-negative integers`,
+        'CONFIG_INVALID',
+      );
+    }
+  }
 }
 
 function assertKnownKeys(value: Record<string, unknown>, allowedKeys: ReadonlySet<string>, path: string): void {
@@ -269,6 +314,10 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string' && item.length > 0);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
 function validateRuleList(rules: unknown, name: string): asserts rules is Rule[] | undefined {
   if (rules === undefined) return;
   if (!Array.isArray(rules)) throw appError(`Config ${name} must be an array`, 'CONFIG_INVALID');
@@ -299,7 +348,7 @@ function normalizePlaceholderPatterns(patterns: readonly Rule[]): RegExp[] {
     .sort((a, b) => b.source.length - a.source.length);
 }
 
-function normalizeHardcodedConfig(config: Partial<HardcodedConfig>): HardcodedConfig {
+function normalizeHardcodedConfig(config: HardcodedConfigInput): HardcodedConfig {
   return {
     vueAttributes: config.vueAttributes || [...DEFAULT_HARDCODED_ATTRIBUTES],
     jsxAttributes: config.jsxAttributes || [...DEFAULT_HARDCODED_ATTRIBUTES],
@@ -307,6 +356,11 @@ function normalizeHardcodedConfig(config: Partial<HardcodedConfig>): HardcodedCo
     ignoreFiles: config.ignoreFiles || [],
     ignoreValues: config.ignoreValues || [],
     ignorePatterns: normalizeRegexRules(config.ignorePatterns || [], 'hardcoded.ignorePatterns'),
+    sinks: {
+      calls: config.sinks?.calls || [],
+      assignments: config.sinks?.assignments || [],
+      properties: config.sinks?.properties || [],
+    },
   };
 }
 

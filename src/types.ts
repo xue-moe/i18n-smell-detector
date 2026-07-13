@@ -23,7 +23,23 @@ export interface HardcodedConfig {
   ignoreFiles: string[];
   ignoreValues: Rule[];
   ignorePatterns: RegExp[];
+  sinks: HardcodedSinks;
 }
+
+export interface HardcodedCallSink {
+  callee: string;
+  arguments: number[];
+}
+
+export interface HardcodedSinks {
+  calls: HardcodedCallSink[];
+  assignments: string[];
+  properties: string[];
+}
+
+export type HardcodedConfigInput = Partial<Omit<HardcodedConfig, 'sinks'>> & {
+  sinks?: Partial<HardcodedSinks>;
+};
 
 export interface DetectorChecks {
   identical: boolean;
@@ -54,7 +70,7 @@ export interface DetectorConfig {
 export type DetectorConfigInput = Partial<Omit<DetectorConfig, 'checks' | 'hardcoded' | 'placeholderPatterns'>> & {
   preset?: ConfigPreset;
   checks?: Partial<DetectorChecks>;
-  hardcoded?: Partial<HardcodedConfig>;
+  hardcoded?: HardcodedConfigInput;
   placeholderPatterns?: Rule[];
 };
 
