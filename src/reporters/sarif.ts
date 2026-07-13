@@ -72,6 +72,9 @@ function toSarifResult(issue: IssueWithCheck): Record<string, unknown> {
       value: issue.value,
       missing: isPlaceholderIssue(issue) ? issue.missing : undefined,
       extra: isPlaceholderIssue(issue) ? issue.extra : undefined,
+      nodeType: isHardcodedIssue(issue) ? issue.nodeType : undefined,
+      parentNodeType: isHardcodedIssue(issue) ? issue.parentNodeType : undefined,
+      containsInterpolation: isHardcodedIssue(issue) ? issue.containsInterpolation : undefined,
     },
   };
 
@@ -83,6 +86,8 @@ function toSarifResult(issue: IssueWithCheck): Record<string, unknown> {
           region: {
             startLine: issue.line,
             startColumn: issue.column,
+            endLine: issue.range?.end.line,
+            endColumn: issue.range?.end.column,
           },
         },
       },

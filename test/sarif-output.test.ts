@@ -12,6 +12,12 @@ type SarifResult = {
       artifactLocation?: {
         uri?: string;
       };
+      region?: {
+        startLine?: number;
+        startColumn?: number;
+        endLine?: number;
+        endColumn?: number;
+      };
     };
   }>;
   partialFingerprints?: {
@@ -44,5 +50,7 @@ test('combined SARIF output includes rules, locations, and stable ids', () => {
   assert.ok(
     run.results.some((issue) => issue.locations?.[0]?.physicalLocation?.artifactLocation?.uri?.endsWith('.vue')),
   );
+  const located = run.results.find((issue) => issue.locations?.[0]?.physicalLocation?.region?.endColumn);
+  assert.ok(located?.locations?.[0]?.physicalLocation?.region?.endLine);
   assert.ok(run.results.every((issue) => issue.partialFingerprints?.stableId));
 });

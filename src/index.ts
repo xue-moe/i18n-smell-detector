@@ -14,6 +14,8 @@ export type {
   ReportOptions,
   Rule,
   Severity,
+  SourcePosition,
+  SourceRange,
 } from './types.js';
 
 export { applyBaseline, issueId, loadBaseline, writeBaseline } from './baseline.js';

@@ -5,6 +5,17 @@ export type ConfigPreset = 'recommended' | 'strict';
 
 export type Rule = string | RegExp;
 
+export interface SourcePosition {
+  line: number;
+  column: number;
+  offset?: number;
+}
+
+export interface SourceRange {
+  start: SourcePosition;
+  end: SourcePosition;
+}
+
 export interface HardcodedConfig {
   vueAttributes: string[];
   jsxAttributes: string[];
@@ -66,6 +77,10 @@ export interface HardcodedIssue {
   severity: Severity;
   reason: string;
   kind: string;
+  range?: SourceRange;
+  nodeType?: string;
+  parentNodeType?: string;
+  containsInterpolation?: boolean;
 }
 
 export interface PlaceholderIssue {

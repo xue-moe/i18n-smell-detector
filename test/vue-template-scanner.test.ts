@@ -24,6 +24,23 @@ test('scanVueTemplate detects text nodes and static attributes', () => {
       ['vue-attribute:placeholder', 'Search'],
     ],
   );
+
+  const title = issues.find((issue) => issue.value === 'Open menu');
+  assert.deepEqual(title?.range, {
+    start: { line: 1, column: 15, offset: 14 },
+    end: { line: 1, column: 26, offset: 25 },
+  });
+  assert.equal(title?.nodeType, 'Attribute');
+  assert.equal(title?.parentNodeType, 'Element');
+  assert.equal(title?.containsInterpolation, false);
+
+  const text = issues.find((issue) => issue.value === 'Save');
+  assert.deepEqual(text?.range, {
+    start: { line: 1, column: 27, offset: 26 },
+    end: { line: 1, column: 31, offset: 30 },
+  });
+  assert.equal(text?.nodeType, 'Text');
+  assert.equal(text?.parentNodeType, 'Element');
 });
 
 test('scanVueTemplate ignores dynamic bindings and i18n expressions', () => {

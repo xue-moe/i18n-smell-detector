@@ -1,7 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { parse } from '@babel/parser';
 import { classifyHardcoded } from '../rules/classify-hardcoded.js';
-import type { HardcodedConfig, HardcodedIssue } from '../types.js';
+import type { HardcodedConfig, HardcodedIssue, SourceRange } from '../types.js';
+import { rangeFromOffsets } from './source-range.js';
 
 type HardcodedScanConfig = { hardcoded: Partial<HardcodedConfig> };
 
@@ -10,11 +11,17 @@ type SourceLocation = {
     line: number;
     column: number;
   };
+  end: {
+    line: number;
+    column: number;
+  };
 };
 
 type AstNode = Record<string, unknown> & {
   type?: string;
   loc?: SourceLocation | null;
+  start?: number | null;
+  end?: number | null;
 };
 
 const SKIP_KEYS = new Set([
@@ -35,31 +42,46 @@ function normalizeText(value: string): string {
 
 function makeIssue({
   file,
-  loc,
+  source,
+  fileSource,
+  sourceOffset,
+  lineOffset,
+  node,
+  parentNodeType,
   value,
   kind,
   baseReason,
   config,
 }: {
   file: string;
-  loc: SourceLocation | null | undefined;
+  source: string;
+  fileSource?: string;
+  sourceOffset: number;
+  lineOffset: number;
+  node: AstNode | null | undefined;
+  parentNodeType?: string;
   value: string;
   kind: string;
   baseReason: string;
   config: HardcodedScanConfig;
 }): HardcodedIssue | null {
   const text = normalizeText(value);
-  if (!text || !loc) return null;
+  const range = resolveNodeRange(source, node, { fileSource, sourceOffset, lineOffset });
+  if (!text || !range) return null;
 
   const classification = classifyHardcoded(text, config);
   return {
     file,
-    line: loc.start.line,
-    column: loc.start.column + 1,
+    line: range.start.line,
+    column: range.start.column,
     value: text,
     severity: classification.severity,
     reason: classification.severity === 'ignored' ? classification.reason : baseReason,
     kind,
+    range,
+    nodeType: node?.type,
+    parentNodeType,
+    containsInterpolation: node?.type === 'TemplateLiteral' && asArray(node.expressions).length > 0,
   };
 }
 
@@ -70,7 +92,19 @@ export async function scanJsSource(file: string, config: HardcodedScanConfig): P
 
 export function scanJsText(
   source: string,
-  { file, config, lineOffset = 0 }: { file: string; config: HardcodedScanConfig; lineOffset?: number },
+  {
+    file,
+    config,
+    lineOffset = 0,
+    sourceOffset = 0,
+    fileSource,
+  }: {
+    file: string;
+    config: HardcodedScanConfig;
+    lineOffset?: number;
+    sourceOffset?: number;
+    fileSource?: string;
+  },
 ): HardcodedIssue[] {
   let ast: AstNode;
 
@@ -89,7 +123,7 @@ export function scanJsText(
   const functions = new Set(config.hardcoded.functions || []);
   const jsxAttributes = new Set(config.hardcoded.jsxAttributes || []);
 
-  walk(ast, (node) => {
+  walk(ast, (node, parent) => {
     if (node.type === 'CallExpression' && functions.has(calleeName(node.callee as AstNode))) {
       for (const argument of asArray(node.arguments)) {
         if (!isAstNode(argument)) continue;
@@ -98,7 +132,12 @@ export function scanJsText(
 
         const issue = makeIssue({
           file,
-          loc: offsetLoc(argument.loc, lineOffset),
+          source,
+          fileSource,
+          sourceOffset,
+          lineOffset,
+          node: argument,
+          parentNodeType: node.type,
           value,
           kind: `js-call:${calleeName(node.callee as AstNode)}`,
           baseReason: `static string passed to ${calleeName(node.callee as AstNode)}`,
@@ -112,7 +151,12 @@ export function scanJsText(
     if (node.type === 'JSXText') {
       const issue = makeIssue({
         file,
-        loc: offsetLoc(node.loc, lineOffset),
+        source,
+        fileSource,
+        sourceOffset,
+        lineOffset,
+        node,
+        parentNodeType: parent?.type,
         value: stringField(node, 'value'),
         kind: 'jsx-text',
         baseReason: 'static JSX text',
@@ -129,7 +173,12 @@ export function scanJsText(
 
       const issue = makeIssue({
         file,
-        loc: offsetLoc(valueNode?.loc, lineOffset),
+        source,
+        fileSource,
+        sourceOffset,
+        lineOffset,
+        node: valueNode,
+        parentNodeType: node.type,
         value,
         kind: `jsx-attribute:${jsxName(node.name)}`,
         baseReason: `static ${jsxName(node.name)} attribute`,
@@ -142,31 +191,47 @@ export function scanJsText(
   return issues;
 }
 
-function offsetLoc(loc: SourceLocation | null | undefined, lineOffset: number): SourceLocation | null | undefined {
-  if (!lineOffset) return loc;
-  if (!loc) return loc;
-  return {
-    ...loc,
-    start: {
-      ...loc.start,
-      line: loc.start.line + lineOffset,
-    },
-  };
-}
-
-function walk(node: unknown, visitor: (node: AstNode) => void): void {
+function walk(node: unknown, visitor: (node: AstNode, parent?: AstNode) => void, parent?: AstNode): void {
   if (!isAstNode(node)) return;
   if (!node || typeof node.type !== 'string') return;
-  visitor(node);
+  visitor(node, parent);
 
   for (const [key, value] of Object.entries(node)) {
     if (SKIP_KEYS.has(key)) continue;
     if (Array.isArray(value)) {
-      for (const child of value) walk(child, visitor);
+      for (const child of value) walk(child, visitor, node);
     } else if (isAstNode(value)) {
-      walk(value, visitor);
+      walk(value, visitor, node);
     }
   }
+}
+
+function resolveNodeRange(
+  source: string,
+  node: AstNode | null | undefined,
+  { fileSource, sourceOffset, lineOffset }: { fileSource?: string; sourceOffset: number; lineOffset: number },
+): SourceRange | undefined {
+  if (!node || typeof node.start !== 'number' || typeof node.end !== 'number') return undefined;
+
+  if (fileSource) {
+    return rangeFromOffsets(fileSource, sourceOffset + node.start, sourceOffset + node.end);
+  }
+
+  const range = rangeFromOffsets(source, node.start, node.end);
+  if (!lineOffset && !sourceOffset) return range;
+
+  return {
+    start: {
+      ...range.start,
+      line: range.start.line + lineOffset,
+      offset: sourceOffset + (range.start.offset ?? 0),
+    },
+    end: {
+      ...range.end,
+      line: range.end.line + lineOffset,
+      offset: sourceOffset + (range.end.offset ?? 0),
+    },
+  };
 }
 
 function calleeName(node: AstNode | null | undefined): string {

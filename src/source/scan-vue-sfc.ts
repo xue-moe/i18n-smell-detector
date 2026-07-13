@@ -6,10 +6,6 @@ import type { HardcodedConfig, HardcodedIssue } from '../types.js';
 
 type HardcodedScanConfig = { hardcoded: Partial<HardcodedConfig> };
 
-function lineOffsetBefore(source: string, offset: number): number {
-  return source.slice(0, offset).split(/\r?\n/).length - 1;
-}
-
 export async function scanVueSfc(file: string, config: HardcodedScanConfig): Promise<HardcodedIssue[]> {
   const source = await readFile(file, 'utf8');
   const result = parse(source, { filename: file });
@@ -26,7 +22,8 @@ export async function scanVueSfc(file: string, config: HardcodedScanConfig): Pro
     issues.push(
       ...scanVueTemplate(template.content, {
         file,
-        lineOffset: lineOffsetBefore(source, template.loc.start.offset),
+        fileSource: source,
+        sourceOffset: template.loc.start.offset,
         config,
       }),
     );
@@ -37,7 +34,8 @@ export async function scanVueSfc(file: string, config: HardcodedScanConfig): Pro
     issues.push(
       ...scanJsText(block.content, {
         file,
-        lineOffset: lineOffsetBefore(source, block.loc.start.offset),
+        fileSource: source,
+        sourceOffset: block.loc.start.offset,
         config,
       }),
     );
