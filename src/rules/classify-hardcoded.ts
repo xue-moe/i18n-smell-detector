@@ -19,9 +19,16 @@ function isNonUserFacing(value: string): boolean {
     /^#[0-9a-f]{3,8}$/i.test(text) ||
     /^(https?:\/\/|mailto:|tel:)/i.test(text) ||
     /^\/[a-z0-9_./:-]*$/i.test(text) ||
-    /^[a-z0-9_.-]+\.(css|js|png|jpe?g|gif|svg|webp|json)$/i.test(text) ||
-    /^[A-Z]{2,6}$/.test(text)
+    /^[a-z0-9_.-]+\.(css|js|png|jpe?g|gif|svg|webp|json)$/i.test(text)
   );
+}
+
+function isTechnicalIdentifier(value: string): boolean {
+  const text = value.trim();
+  if (!/^[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+$/.test(text)) return false;
+
+  const segments = text.split('_');
+  return segments.filter((segment) => /[A-Za-z]/.test(segment)).length >= 2;
 }
 
 function latinWords(value: string): string[] {
@@ -50,6 +57,7 @@ export function classifyHardcoded(
   if (isBlank(value)) return { severity: 'ignored', reason: 'blank value' };
   if (isMustacheOnly(value)) return { severity: 'ignored', reason: 'mustache expression' };
   if (isNonUserFacing(value)) return { severity: 'ignored', reason: 'non-user-facing value' };
+  if (isTechnicalIdentifier(value)) return { severity: 'ignored', reason: 'technical identifier' };
   if (isShortCommonLabel(value)) return { severity: 'low', reason: 'short common label' };
 
   const words = latinWords(value);
