@@ -86,9 +86,9 @@ test('baseline update writes current issues', async () => {
 
     assert.equal(result.status, 0);
     const parsed = parseIssuesJson(await readFile(baseline, 'utf8'));
-    assert.equal(parsed.version, 1);
+    assert.equal(parsed.version, 2);
     assert.ok(parsed.issues.some((issue) => issue.id === 'identical:zh:home.title'));
-    assert.ok(parsed.issues.some((issue) => issue.id?.startsWith('hardcoded:')));
+    assert.ok(parsed.issues.some((issue) => issue.id?.startsWith('hardcoded:v2:')));
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
@@ -219,27 +219,28 @@ test('stale baseline issues disappear when baseline is updated', async () => {
   }
 });
 
-test('moving a hardcoded string changes its baseline id', async () => {
+test('baseline fingerprints distinguish source position changes', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-baseline-'));
   const baseline = path.join(tempDir, 'baseline.json');
 
   try {
     await writeBasicProject(tempDir);
-    await writeFile(
+    const update = run([
+      'check',
+      '--config',
+      path.join(tempDir, 'i18n-smell.config.mjs'),
+      '--baseline',
       baseline,
-      JSON.stringify({
-        version: 1,
-        issues: [
-          {
-            id: 'hardcoded:src/components/UserPanel.vue:8:13:Save',
-            file: 'src/components/UserPanel.vue',
-            line: 8,
-            column: 13,
-            value: 'Save',
-          },
-        ],
-      }),
-    );
+      '--update-baseline',
+    ]);
+    assert.equal(update.status, 0, update.stderr);
+    const before = parseIssuesJson(await readFile(baseline, 'utf8')).issues.find((issue) => issue.value === 'Save');
+    assert.ok(before);
+    assert.ok(before.id?.startsWith('hardcoded:v2:'));
+
+    const componentPath = path.join(tempDir, 'src/components/UserPanel.vue');
+    const component = await readFile(componentPath, 'utf8');
+    await writeFile(componentPath, component.replace('    <button>Save', '\n    <button>Save'));
 
     const result = run([
       'check',
@@ -255,7 +256,50 @@ test('moving a hardcoded string changes its baseline id', async () => {
 
     assert.equal(result.status, 0);
     const report = parseIssuesJson(result.stdout);
-    assert.ok(report.issues.some((issue) => issue.check === 'hardcoded' && issue.value === 'Save'));
+    const moved = report.issues.find((issue) => issue.check === 'hardcoded' && issue.value === 'Save');
+    assert.ok(moved);
+    assert.notEqual(moved.id, before.id);
+    assert.notEqual(moved.reason, 'baseline');
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('version 1 hardcoded baseline ids remain compatible', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-baseline-'));
+  const baseline = path.join(tempDir, 'baseline.json');
+
+  try {
+    await writeBasicProject(tempDir);
+    await writeFile(
+      baseline,
+      JSON.stringify({
+        version: 1,
+        issues: [
+          {
+            id: 'hardcoded:src/components/UserPanel.vue:4:13:Save',
+            value: 'Save',
+          },
+        ],
+      }),
+    );
+
+    const result = run([
+      'check',
+      '--config',
+      path.join(tempDir, 'i18n-smell.config.mjs'),
+      '--baseline',
+      baseline,
+      '--format',
+      'json',
+      '--include-ignored',
+      '--fail-on',
+      'none',
+    ]);
+
+    assert.equal(result.status, 0, result.stderr);
+    const report = parseIssuesJson(result.stdout);
+    assert.ok(report.issues.some((issue) => issue.value === 'Save' && issue.reason === 'baseline'));
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

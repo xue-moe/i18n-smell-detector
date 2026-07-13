@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import type {
   CheckResult,
@@ -17,6 +18,11 @@ type BaselineIssue = {
   file?: string;
   line?: number;
   column?: number;
+  range?: HardcodedIssue['range'];
+  kind?: string;
+  nodeType?: string;
+  parentNodeType?: string;
+  containsInterpolation?: boolean;
 };
 
 function errorCode(error: unknown): string | undefined {
@@ -33,7 +39,19 @@ export function issueId(check: CustomCheckName, issue: DetectorIssue): string {
     return `${check}:${localeIssue.targetLocale}:${localeIssue.key}`;
   }
   const hardcodedIssue = issue as HardcodedIssue;
-  return `hardcoded:${hardcodedIssue.file}:${hardcodedIssue.line}:${hardcodedIssue.column}:${hardcodedIssue.value}`;
+  const fingerprint = JSON.stringify({
+    file: hardcodedIssue.file.replaceAll('\\', '/'),
+    kind: hardcodedIssue.kind,
+    nodeType: hardcodedIssue.nodeType,
+    parentNodeType: hardcodedIssue.parentNodeType,
+    containsInterpolation: hardcodedIssue.containsInterpolation || false,
+    value: normalizeFindingValue(hardcodedIssue.value),
+    range: hardcodedIssue.range || {
+      start: { line: hardcodedIssue.line, column: hardcodedIssue.column },
+    },
+  });
+  const digest = createHash('sha256').update(fingerprint).digest('hex').slice(0, 20);
+  return `hardcoded:v2:${digest}`;
 }
 
 export async function loadBaseline(filePath: string | undefined): Promise<Set<string>> {
@@ -63,7 +81,8 @@ export function applyBaseline(results: CheckResult[], ids: Set<string>): CheckRe
     ...result,
     issues: result.issues.map((issue) => {
       const id = issueId(result.check, issue);
-      if (!ids.has(id)) return { ...issue, id };
+      const legacyId = legacyIssueId(result.check, issue);
+      if (!ids.has(id) && !ids.has(legacyId)) return { ...issue, id };
       return { ...issue, id, severity: 'ignored', reason: 'baseline' };
     }),
   }));
@@ -80,7 +99,7 @@ export async function writeBaseline(filePath: string, results: CheckResult[]): P
   }
 
   await mkdir(path.dirname(filePath), { recursive: true });
-  await writeFile(filePath, `${JSON.stringify({ version: 1, issues }, null, 2)}\n`);
+  await writeFile(filePath, `${JSON.stringify({ version: 2, issues }, null, 2)}\n`);
   return issues.length;
 }
 
@@ -105,7 +124,24 @@ function toBaselineIssue(check: CustomCheckName, issue: DetectorIssue): Baseline
     file: hardcodedIssue.file,
     line: hardcodedIssue.line,
     column: hardcodedIssue.column,
+    range: hardcodedIssue.range,
+    kind: hardcodedIssue.kind,
+    nodeType: hardcodedIssue.nodeType,
+    parentNodeType: hardcodedIssue.parentNodeType,
+    containsInterpolation: hardcodedIssue.containsInterpolation,
   };
+}
+
+function legacyIssueId(check: CustomCheckName, issue: DetectorIssue): string {
+  if (!isHardcodedIssue(issue) && (check === 'identical' || check === 'placeholders')) {
+    return issueId(check, issue);
+  }
+  const hardcodedIssue = issue as HardcodedIssue;
+  return `hardcoded:${hardcodedIssue.file}:${hardcodedIssue.line}:${hardcodedIssue.column}:${hardcodedIssue.value}`;
+}
+
+function normalizeFindingValue(value: string): string {
+  return value.normalize('NFKC').replace(/\s+/gu, ' ').trim();
 }
 
 function isHardcodedIssue(issue: DetectorIssue): issue is HardcodedIssue {
