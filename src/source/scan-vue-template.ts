@@ -1,6 +1,7 @@
 import { NodeTypes, parse } from '@vue/compiler-dom';
 import { classifyHardcoded } from '../rules/classify-hardcoded.js';
 import type { HardcodedConfig, HardcodedIssue, Severity, SourceRange } from '../types.js';
+import { scanExpressionStrings } from './scan-expression-strings.js';
 import { rangeFromOffsets } from './source-range.js';
 
 type HardcodedScanConfig = { hardcoded: Partial<HardcodedConfig> };
@@ -19,8 +20,11 @@ type VueNode = {
   children?: VueNode[];
   props?: VueNode[];
   loc: VueLocation;
-  content?: string;
+  content?: string | VueNode;
   name?: string;
+  isStatic?: boolean;
+  arg?: VueNode;
+  exp?: VueNode;
   value?: {
     content: string;
     loc: VueLocation;
@@ -171,7 +175,7 @@ export function scanVueTemplate(
         fileSource,
         sourceOffset,
         loc: node.loc,
-        value: node.content || '',
+        value: typeof node.content === 'string' ? node.content : '',
         kind: 'vue-text',
         baseReason: 'static template text',
         config,
@@ -182,9 +186,40 @@ export function scanVueTemplate(
       return;
     }
 
+    if (node.type === NodeTypes.INTERPOLATION && node.content && typeof node.content !== 'string') {
+      scanVueExpression({
+        expression: node.content,
+        file,
+        template,
+        fileSource,
+        sourceOffset,
+        kind: 'vue-interpolation',
+        baseReason: 'static string in Vue interpolation',
+        config,
+        issues,
+      });
+      return;
+    }
+
     if (node.type !== NodeTypes.ELEMENT) return;
 
     for (const prop of node.props || []) {
+      if (prop.type === NodeTypes.DIRECTIVE && prop.name === 'bind' && prop.exp) {
+        const attribute = prop.arg?.isStatic && typeof prop.arg.content === 'string' ? prop.arg.content : 'dynamic';
+        scanVueExpression({
+          expression: prop.exp,
+          file,
+          template,
+          fileSource,
+          sourceOffset,
+          kind: `vue-bind:${attribute}`,
+          baseReason: `static string in bound ${attribute} attribute`,
+          config,
+          issues,
+        });
+        continue;
+      }
+
       if (prop.type !== NodeTypes.ATTRIBUTE) continue;
       if (!prop.name || !attributes.has(prop.name) || !prop.value) continue;
       if (isI18nExpression(prop.value.content)) continue;
@@ -208,6 +243,60 @@ export function scanVueTemplate(
   });
 
   return issues;
+}
+
+function scanVueExpression({
+  expression,
+  file,
+  template,
+  fileSource,
+  sourceOffset,
+  kind,
+  baseReason,
+  config,
+  issues,
+}: {
+  expression: VueNode;
+  file: string;
+  template: string;
+  fileSource?: string;
+  sourceOffset: number;
+  kind: string;
+  baseReason: string;
+  config: HardcodedScanConfig;
+  issues: HardcodedIssue[];
+}): void {
+  if (typeof expression.content !== 'string' || isI18nExpression(expression.content)) return;
+
+  let strings;
+  try {
+    strings = scanExpressionStrings(expression.content, {
+      fileSource: fileSource ?? template,
+      sourceOffset: sourceOffset + expression.loc.start.offset,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Malformed Vue expression in ${file}: ${message}`);
+  }
+
+  for (const finding of strings) {
+    const text = normalizeText(finding.value);
+    if (!text) continue;
+    const classification = classifyHardcoded(text, config);
+    issues.push({
+      file,
+      line: finding.range.start.line,
+      column: finding.range.start.column,
+      value: text,
+      severity: classification.severity,
+      reason: classification.severity === 'ignored' ? classification.reason : baseReason,
+      kind,
+      range: finding.range,
+      nodeType: finding.nodeType,
+      parentNodeType: finding.expressionKind,
+      containsInterpolation: finding.containsInterpolation,
+    });
+  }
 }
 
 function resolveRange(
