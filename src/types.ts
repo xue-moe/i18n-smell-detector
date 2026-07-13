@@ -16,6 +16,12 @@ export interface SourceRange {
   end: SourcePosition;
 }
 
+export interface MessageInterpolation {
+  placeholder: string;
+  expression: string;
+  range: SourceRange;
+}
+
 export interface HardcodedConfig {
   vueAttributes: string[];
   jsxAttributes: string[];
@@ -97,6 +103,8 @@ export interface HardcodedIssue {
   nodeType?: string;
   parentNodeType?: string;
   containsInterpolation?: boolean;
+  rawValue?: string;
+  interpolations?: MessageInterpolation[];
 }
 
 export interface PlaceholderIssue {

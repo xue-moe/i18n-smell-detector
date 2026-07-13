@@ -11,6 +11,7 @@ export type {
   HardcodedCallSink,
   HardcodedIssue,
   HardcodedSinks,
+  MessageInterpolation,
   IdenticalIssue,
   PlaceholderIssue,
   ReportFormat,
