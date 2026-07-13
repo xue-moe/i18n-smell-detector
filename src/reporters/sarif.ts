@@ -75,6 +75,8 @@ function toSarifResult(issue: IssueWithCheck): Record<string, unknown> {
       nodeType: isHardcodedIssue(issue) ? issue.nodeType : undefined,
       parentNodeType: isHardcodedIssue(issue) ? issue.parentNodeType : undefined,
       containsInterpolation: isHardcodedIssue(issue) ? issue.containsInterpolation : undefined,
+      rawValue: isHardcodedIssue(issue) ? issue.rawValue : undefined,
+      interpolations: isHardcodedIssue(issue) ? issue.interpolations : undefined,
     },
   };
 

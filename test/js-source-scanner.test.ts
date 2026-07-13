@@ -160,6 +160,29 @@ test('scanJsText extracts nested sink branches and complete template messages', 
   );
 });
 
+test('scanJsText reports an interpolated template as one message candidate', () => {
+  const source = 'notify(`Delete item "${key}"?`);';
+  const issues = scanJsText(source, {
+    file: 'template.ts',
+    config: {
+      hardcoded: {
+        functions: [],
+        jsxAttributes: [],
+        ignoreValues: [],
+        ignorePatterns: [],
+        sinks: { calls: [{ callee: 'notify', arguments: [0] }], assignments: [], properties: [] },
+      },
+    },
+  });
+
+  assert.equal(issues.length, 1);
+  assert.equal(issues[0].value, 'Delete item "{key}"?');
+  assert.equal(issues[0].rawValue, '`Delete item "${key}"?`');
+  assert.equal(issues[0].containsInterpolation, true);
+  assert.equal(issues[0].interpolations?.[0].expression, 'key');
+  assert.equal(issues[0].range?.start.offset, source.indexOf('`'));
+});
+
 test('checkHardcodedStrings detects JSX text and static attributes', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-jsx-'));
 

@@ -92,10 +92,7 @@ test('scanExpressionStrings supports the selected expression forms', () => {
       value,
       containsInterpolation,
     })),
-    [
-      { value: 'Hello ', containsInterpolation: true },
-      { value: '!', containsInterpolation: true },
-    ],
+    [{ value: 'Hello {name}!', containsInterpolation: true }],
   );
 });
 
@@ -113,7 +110,7 @@ test('scanVueTemplate detects strings in interpolations and bound attributes', (
       ['vue-interpolation', 'Ready'],
       ['vue-bind:label', 'Enabled'],
       ['vue-bind:label', 'Disabled'],
-      ['vue-bind:title', 'Hello'],
+      ['vue-bind:title', 'Hello {name}'],
     ],
   );
 
@@ -122,9 +119,12 @@ test('scanVueTemplate detects strings in interpolations and bound attributes', (
   assert.equal(loading?.nodeType, 'StringLiteral');
   assert.equal(loading?.parentNodeType, 'ConditionalExpression');
 
-  const hello = visible.find((issue) => issue.value === 'Hello');
+  const hello = visible.find((issue) => issue.value === 'Hello {name}');
   assert.equal(hello?.containsInterpolation, true);
-  assert.equal(hello?.nodeType, 'TemplateElement');
+  assert.equal(hello?.nodeType, 'TemplateLiteral');
+  assert.equal(hello?.rawValue, '`Hello ${name}`');
+  assert.equal(hello?.interpolations?.[0].placeholder, 'name');
+  assert.equal(hello?.interpolations?.[0].expression, 'name');
 });
 
 test('scanVueTemplate applies line offsets to expression findings', () => {

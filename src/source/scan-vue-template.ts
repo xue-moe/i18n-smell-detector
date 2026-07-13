@@ -306,6 +306,8 @@ function scanVueExpression({
       nodeType: finding.nodeType,
       parentNodeType: finding.expressionKind,
       containsInterpolation: finding.containsInterpolation,
+      rawValue: finding.rawValue,
+      interpolations: finding.interpolations,
     });
   }
 }
