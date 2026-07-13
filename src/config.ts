@@ -64,6 +64,7 @@ const CONFIG_KEYS = new Set([
   'includeIgnored',
   'failOn',
   'preset',
+  'doNotTranslate',
 ]);
 const CHECK_KEYS = new Set<string>(CHECK_NAMES);
 const HARDCODED_KEYS = new Set([
@@ -77,6 +78,7 @@ const HARDCODED_KEYS = new Set([
 ]);
 const SINK_KEYS = new Set(['calls', 'assignments', 'properties']);
 const CALL_SINK_KEYS = new Set(['callee', 'arguments']);
+const DO_NOT_TRANSLATE_KEYS = new Set(['values', 'keys', 'category', 'reason', 'comment', 'owner']);
 
 async function exists(filePath: string): Promise<boolean> {
   try {
@@ -150,6 +152,28 @@ function validateConfig(config: unknown): asserts config is DetectorConfigInput 
 
   validateRuleList(candidate.allowIdenticalKeys, 'allowIdenticalKeys');
   validateRuleList(candidate.allowIdenticalValues, 'allowIdenticalValues');
+  if ('doNotTranslate' in candidate && !Array.isArray(candidate.doNotTranslate)) {
+    throw appError('Config doNotTranslate must be an array', 'CONFIG_INVALID');
+  }
+  for (const [index, rule] of (Array.isArray(candidate.doNotTranslate) ? candidate.doNotTranslate : []).entries()) {
+    if (!isRecord(rule)) throw appError(`Config doNotTranslate[${index}] must be an object`, 'CONFIG_INVALID');
+    assertKnownKeys(rule, DO_NOT_TRANSLATE_KEYS, `doNotTranslate[${index}]`);
+    validateRuleList(rule.values, `doNotTranslate[${index}].values`);
+    validateRuleList(rule.keys, `doNotTranslate[${index}].keys`);
+    if (rule.values === undefined && rule.keys === undefined) {
+      throw appError(`Config doNotTranslate[${index}] must define values or keys`, 'CONFIG_INVALID');
+    }
+    for (const field of ['category', 'reason'] as const) {
+      if (typeof rule[field] !== 'string' || !rule[field]) {
+        throw appError(`Config doNotTranslate[${index}].${field} must be a non-empty string`, 'CONFIG_INVALID');
+      }
+    }
+    for (const field of ['comment', 'owner'] as const) {
+      if (field in rule && typeof rule[field] !== 'string') {
+        throw appError(`Config doNotTranslate[${index}].${field} must be a string`, 'CONFIG_INVALID');
+      }
+    }
+  }
 
   if ('placeholderPatterns' in candidate && !Array.isArray(candidate.placeholderPatterns)) {
     throw appError('Config placeholderPatterns must be an array of strings or RegExp objects', 'CONFIG_INVALID');
@@ -296,6 +320,7 @@ function withDefaults(config: DetectorConfigInput): DetectorConfig {
     ignoreCase: false,
     includeIgnored: false,
     failOn: presetDefaults.failOn,
+    doNotTranslate: [],
     ...rest,
     checks: {
       identical: true,

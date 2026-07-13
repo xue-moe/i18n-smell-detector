@@ -79,6 +79,7 @@ function toSarifResult(issue: IssueWithCheck): Record<string, unknown> {
       interpolations: isHardcodedIssue(issue) ? issue.interpolations : undefined,
       contextHash: isHardcodedIssue(issue) ? issue.contextHash : undefined,
       relativeRange: isHardcodedIssue(issue) ? issue.relativeRange : undefined,
+      suppression: 'suppression' in issue ? issue.suppression : undefined,
     },
   };
 

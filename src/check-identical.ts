@@ -29,7 +29,7 @@ export function checkIdenticalTranslations(
       if (!(key in target)) continue;
       if (normalize(baseValue, config) !== normalize(target[key], config)) continue;
 
-      const { severity, reason } = classifyIdentical({
+      const { severity, reason, suppression } = classifyIdentical({
         key,
         value: target[key],
         baseLocale: config.baseLocale,
@@ -44,6 +44,7 @@ export function checkIdenticalTranslations(
         value: target[key],
         severity,
         reason,
+        suppression,
       });
     }
   }

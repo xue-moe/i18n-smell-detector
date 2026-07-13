@@ -5,6 +5,23 @@ export type ConfigPreset = 'recommended' | 'strict';
 
 export type Rule = string | RegExp;
 
+export interface DoNotTranslateRule {
+  values?: Rule[];
+  keys?: Rule[];
+  category: string;
+  reason: string;
+  comment?: string;
+  owner?: string;
+}
+
+export interface IssueSuppression {
+  type: 'do-not-translate';
+  category: string;
+  reason: string;
+  comment?: string;
+  owner?: string;
+}
+
 export interface SourcePosition {
   line: number;
   column: number;
@@ -71,6 +88,7 @@ export interface DetectorConfig {
   ignoreCase: boolean;
   includeIgnored: boolean;
   failOn: FailOnLevel;
+  doNotTranslate: DoNotTranslateRule[];
 }
 
 export type DetectorConfigInput = Partial<Omit<DetectorConfig, 'checks' | 'hardcoded' | 'placeholderPatterns'>> & {
@@ -88,6 +106,7 @@ export interface IdenticalIssue {
   value: string;
   severity: Severity;
   reason: string;
+  suppression?: IssueSuppression;
 }
 
 export interface HardcodedIssue {

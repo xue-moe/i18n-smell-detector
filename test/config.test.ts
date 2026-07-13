@@ -24,6 +24,7 @@ test('loadConfig applies documented defaults', async () => {
         locales: {},
         allowIdenticalKeys: [],
         allowIdenticalValues: [],
+        doNotTranslate: [],
         placeholderPatterns: undefined,
         source: ['src/**/*.{vue,js,jsx,ts,tsx}'],
         checks: {
@@ -128,6 +129,29 @@ test('loadConfig supports recommended and strict presets', async () => {
 
     await writeFile(invalidConfigPath, "export default { preset: 'loud' };");
     await assert.rejects(() => loadConfig(invalidConfigPath), /Config preset must be recommended or strict/);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('loadConfig validates categorized do-not-translate rules', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-config-'));
+  const validPath = path.join(tempDir, 'valid-dnt.config.mjs');
+  const invalidPath = path.join(tempDir, 'invalid-dnt.config.mjs');
+
+  try {
+    await writeFile(
+      validPath,
+      `export default { doNotTranslate: [{ values: ['PRODUCT_X'], category: 'product-name', reason: 'Official term' }] };`,
+    );
+    const config = await loadConfig(validPath);
+    assert.equal(config.doNotTranslate[0].category, 'product-name');
+
+    await writeFile(
+      invalidPath,
+      `export default { doNotTranslate: [{ values: ['X'], category: 'term', typo: true }] };`,
+    );
+    await assert.rejects(() => loadConfig(invalidPath), /Unknown configuration option: doNotTranslate\[0\]\.typo/);
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

@@ -23,6 +23,9 @@ function formatDetails(issue: DetectorIssue): string {
   const details: string[] = [];
   if (isPlaceholderIssue(issue) && issue.missing.length) details.push(`missing: ${issue.missing.join(', ')}`);
   if (isPlaceholderIssue(issue) && issue.extra.length) details.push(`extra: ${issue.extra.join(', ')}`);
+  if ('suppression' in issue && issue.suppression) {
+    details.push(`do-not-translate: ${issue.suppression.category} (${issue.suppression.reason})`);
+  }
   return details.join('; ');
 }
 

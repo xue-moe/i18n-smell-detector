@@ -47,7 +47,7 @@ export function renderMarkdownReport(issues: DetectorIssue[], options: ReportOpt
         );
       } else {
         lines.push(
-          `| ${escapeCell(issue.severity)} | ${escapeCell(issue.targetLocale)} | ${escapeCell(issue.key)} | ${escapeCell(issue.value)} | ${escapeCell(issue.reason)} |`,
+          `| ${escapeCell(issue.severity)} | ${escapeCell(issue.targetLocale)} | ${escapeCell(issue.key)} | ${escapeCell(issue.value)} | ${escapeCell(formatReason(issue))} |`,
         );
       }
     }
@@ -59,6 +59,12 @@ export function renderMarkdownReport(issues: DetectorIssue[], options: ReportOpt
 function formatLocation(issue: DetectorIssue): string {
   if (isHardcodedIssue(issue)) return `${issue.file}:${issue.line}:${issue.column}`;
   return `${issue.targetLocale}.${issue.key}`;
+}
+
+function formatReason(issue: DetectorIssue): string {
+  return 'suppression' in issue && issue.suppression
+    ? `[${issue.suppression.category}] ${issue.suppression.reason}`
+    : issue.reason;
 }
 
 function isHardcodedIssue(issue: DetectorIssue): issue is HardcodedIssue {

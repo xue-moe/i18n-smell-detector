@@ -1,7 +1,7 @@
 import { matchesAnyRule } from './match-rule.js';
-import type { DetectorConfig, Severity } from '../types.js';
+import type { DetectorConfig, IssueSuppression, Severity } from '../types.js';
 
-type Classification = { severity: Severity; reason: string };
+type Classification = { severity: Severity; reason: string; suppression?: IssueSuppression };
 
 function isBlank(value: string): boolean {
   return value.trim().length === 0;
@@ -60,6 +60,19 @@ export function classifyIdentical({
   targetLocale: string;
   config: Partial<DetectorConfig> & { baseLocale?: string };
 }): Classification {
+  const doNotTranslate = (config.doNotTranslate || []).find((rule) => {
+    const keyMatches = !rule.keys || matchesAnyRule(key, rule.keys);
+    const valueMatches = !rule.values || matchesAnyRule(value, rule.values);
+    return keyMatches && valueMatches;
+  });
+  if (doNotTranslate) {
+    const { category, reason, comment, owner } = doNotTranslate;
+    return {
+      severity: 'ignored',
+      reason,
+      suppression: { type: 'do-not-translate', category, reason, comment, owner },
+    };
+  }
   if (matchesAnyRule(key, config.allowIdenticalKeys || [], { wildcard: true })) {
     return { severity: 'ignored', reason: 'allowed key' };
   }

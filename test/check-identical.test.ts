@@ -58,3 +58,23 @@ test('checkIdenticalTranslations recognizes Unicode letter words', () => {
   assert.equal(issues[0].severity, 'high');
   assert.equal(issues[0].reason, 'copied English phrase');
 });
+
+test('checkIdenticalTranslations applies categorized do-not-translate rules with metadata', () => {
+  const issues = checkIdenticalTranslations(
+    {
+      en: { 'product.name': 'PRODUCT_X', 'technical.model': 'MODEL-100', 'home.title': 'Welcome back' },
+      zh: { 'product.name': 'PRODUCT_X', 'technical.model': 'MODEL-100', 'home.title': 'Welcome back' },
+    },
+    {
+      ...config,
+      doNotTranslate: [
+        { values: ['PRODUCT_X'], category: 'product-name', reason: 'Official terminology', owner: 'l10n' },
+        { keys: [/^technical\./], values: [/^MODEL-\d+$/], category: 'technical-term', reason: 'Protocol term' },
+      ],
+    },
+  );
+
+  assert.equal(issues.find((issue) => issue.key === 'product.name')?.suppression?.category, 'product-name');
+  assert.equal(issues.find((issue) => issue.key === 'technical.model')?.suppression?.reason, 'Protocol term');
+  assert.equal(issues.find((issue) => issue.key === 'home.title')?.severity, 'high');
+});
