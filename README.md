@@ -89,6 +89,36 @@ export default {
 };
 ```
 
+Configured sinks recursively inspect conditional, logical, parenthesized, and TypeScript wrapper expressions. An
+interpolated template such as `` `Delete ${item.name}?` `` is reported once as `Delete {item.name}?`, with the raw
+template and interpolation ranges available in JSON and SARIF output.
+
+Categorize values that must intentionally remain identical across locales:
+
+```js
+export default {
+  doNotTranslate: [
+    {
+      values: ['PRODUCT_X', /^MODEL-\d+$/],
+      category: 'product-name',
+      reason: 'Official product terminology',
+      owner: 'localization-team',
+    },
+    {
+      keys: [/^technical\./],
+      category: 'technical-term',
+      reason: 'Protocol terminology',
+    },
+  ],
+  hardcoded: {
+    technicalTerms: ['PROTOCOL_X', /^MODEL-\d+$/],
+  },
+};
+```
+
+`doNotTranslate` applies to identical-translation findings and preserves auditable suppression metadata. Hardcoded
+findings expose `confidence` separately from `severity`; `failOn` continues to use severity only.
+
 ## Reports
 
 ```bash
