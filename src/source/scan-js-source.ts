@@ -3,6 +3,7 @@ import { parse } from '@babel/parser';
 import { classifyHardcoded } from '../rules/classify-hardcoded.js';
 import type { HardcodedConfig, HardcodedIssue, SourceRange } from '../types.js';
 import { rangeFromOffsets } from './source-range.js';
+import { extractMessageCandidates, type MessageNode } from './extract-message-candidates.js';
 
 type HardcodedScanConfig = { hardcoded: Partial<HardcodedConfig> };
 
@@ -131,6 +132,38 @@ export function scanJsText(
     callSinks.set(sink.callee, indexes);
   }
 
+  const addCandidates = (
+    valueNode: AstNode | null | undefined,
+    parentNode: AstNode,
+    kind: string,
+    baseReason: string,
+  ) => {
+    for (const candidate of extractMessageCandidates(valueNode as MessageNode, source, {
+      fileSource,
+      sourceOffset,
+      expressionKind: valueNode?.type,
+    })) {
+      const text = normalizeText(candidate.value);
+      if (!text) continue;
+      const classification = classifyHardcoded(text, config);
+      issues.push({
+        file,
+        line: candidate.range.start.line + (!fileSource ? lineOffset : 0),
+        column: candidate.range.start.column,
+        value: text,
+        rawValue: candidate.rawValue,
+        interpolations: candidate.interpolations,
+        severity: classification.severity,
+        reason: classification.severity === 'ignored' ? classification.reason : baseReason,
+        kind,
+        range: candidate.range,
+        nodeType: candidate.nodeType,
+        parentNodeType: parentNode.type,
+        containsInterpolation: candidate.containsInterpolation,
+      });
+    }
+  };
+
   walk(ast, (node, parent) => {
     if (node.type === 'CallExpression') {
       const callee = calleeName(node.callee as AstNode);
@@ -140,23 +173,7 @@ export function scanJsText(
       for (const [index, argument] of argumentsToScan.entries()) {
         if (!functions.has(callee) && !selectedArguments?.has(index)) continue;
         if (!isAstNode(argument)) continue;
-        const value = staticString(argument);
-        if (value === null) continue;
-
-        const issue = makeIssue({
-          file,
-          source,
-          fileSource,
-          sourceOffset,
-          lineOffset,
-          node: argument,
-          parentNodeType: node.type,
-          value,
-          kind: `js-call:${callee}`,
-          baseReason: `static string passed to ${callee}`,
-          config,
-        });
-        if (issue) issues.push(issue);
+        addCandidates(argument, node, `js-call:${callee}`, `static string passed to ${callee}`);
       }
       if (functions.has(callee) || selectedArguments) return;
     }
@@ -165,23 +182,7 @@ export function scanJsText(
       const target = calleeName(node.left as AstNode);
       if (!assignmentSinks.has(target)) return;
       const valueNode = node.right as AstNode | null | undefined;
-      const value = staticString(valueNode);
-      if (value === null) return;
-
-      const issue = makeIssue({
-        file,
-        source,
-        fileSource,
-        sourceOffset,
-        lineOffset,
-        node: valueNode,
-        parentNodeType: node.type,
-        value,
-        kind: `js-assignment:${target}`,
-        baseReason: `static string assigned to ${target}`,
-        config,
-      });
-      if (issue) issues.push(issue);
+      addCandidates(valueNode, node, `js-assignment:${target}`, `static string assigned to ${target}`);
       return;
     }
 
@@ -189,23 +190,7 @@ export function scanJsText(
       const property = propertyName(node.key as AstNode, Boolean(node.computed));
       if (!propertySinks.has(property)) return;
       const valueNode = node.value as AstNode | null | undefined;
-      const value = staticString(valueNode);
-      if (value === null) return;
-
-      const issue = makeIssue({
-        file,
-        source,
-        fileSource,
-        sourceOffset,
-        lineOffset,
-        node: valueNode,
-        parentNodeType: node.type,
-        value,
-        kind: `js-property:${property}`,
-        baseReason: `static string in ${property} property`,
-        config,
-      });
-      if (issue) issues.push(issue);
+      addCandidates(valueNode, node, `js-property:${property}`, `static string in ${property} property`);
       return;
     }
 

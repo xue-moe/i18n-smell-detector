@@ -131,6 +131,35 @@ test('scanJsText detects only explicitly configured call, assignment, and proper
   );
 });
 
+test('scanJsText extracts nested sink branches and complete template messages', () => {
+  const source = `
+    error.value = ok ? error.message : 'Payment failed';
+    toast.add({ summary: valid ? 'Ready' : 'Invalid input', detail: message || 'Enter a valid value.' });
+    notify(success ? 'Saved successfully' : 'Save failed');
+  `;
+  const issues = scanJsText(source, {
+    file: 'nested.ts',
+    config: {
+      hardcoded: {
+        functions: [],
+        jsxAttributes: [],
+        ignoreValues: [],
+        ignorePatterns: [],
+        sinks: {
+          calls: [{ callee: 'notify', arguments: [0] }],
+          assignments: ['error.value'],
+          properties: ['summary', 'detail'],
+        },
+      },
+    },
+  });
+
+  assert.deepEqual(
+    issues.map((issue) => issue.value),
+    ['Payment failed', 'Ready', 'Invalid input', 'Enter a valid value.', 'Saved successfully', 'Save failed'],
+  );
+});
+
 test('checkHardcodedStrings detects JSX text and static attributes', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-jsx-'));
 
