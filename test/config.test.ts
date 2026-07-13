@@ -138,6 +138,8 @@ test('loadConfig validates categorized do-not-translate rules', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-config-'));
   const validPath = path.join(tempDir, 'valid-dnt.config.mjs');
   const invalidPath = path.join(tempDir, 'invalid-dnt.config.mjs');
+  const emptyPath = path.join(tempDir, 'empty-dnt.config.mjs');
+  const missingReasonPath = path.join(tempDir, 'missing-reason-dnt.config.mjs');
 
   try {
     await writeFile(
@@ -152,6 +154,15 @@ test('loadConfig validates categorized do-not-translate rules', async () => {
       `export default { doNotTranslate: [{ values: ['X'], category: 'term', typo: true }] };`,
     );
     await assert.rejects(() => loadConfig(invalidPath), /Unknown configuration option: doNotTranslate\[0\]\.typo/);
+
+    await writeFile(
+      emptyPath,
+      `export default { doNotTranslate: [{ values: [], category: 'term', reason: 'Empty' }] };`,
+    );
+    await assert.rejects(() => loadConfig(emptyPath), /must define non-empty values or keys/);
+
+    await writeFile(missingReasonPath, `export default { doNotTranslate: [{ values: ['X'], category: 'term' }] };`);
+    await assert.rejects(() => loadConfig(missingReasonPath), /doNotTranslate\[0\]\.reason must be a non-empty string/);
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

@@ -161,8 +161,10 @@ function validateConfig(config: unknown): asserts config is DetectorConfigInput 
     assertKnownKeys(rule, DO_NOT_TRANSLATE_KEYS, `doNotTranslate[${index}]`);
     validateRuleList(rule.values, `doNotTranslate[${index}].values`);
     validateRuleList(rule.keys, `doNotTranslate[${index}].keys`);
-    if (rule.values === undefined && rule.keys === undefined) {
-      throw appError(`Config doNotTranslate[${index}] must define values or keys`, 'CONFIG_INVALID');
+    const hasValues = Array.isArray(rule.values) && rule.values.length > 0;
+    const hasKeys = Array.isArray(rule.keys) && rule.keys.length > 0;
+    if (!hasValues && !hasKeys) {
+      throw appError(`Config doNotTranslate[${index}] must define non-empty values or keys`, 'CONFIG_INVALID');
     }
     for (const field of ['category', 'reason'] as const) {
       if (typeof rule[field] !== 'string' || !rule[field]) {
