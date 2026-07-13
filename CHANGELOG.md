@@ -1,3 +1,23 @@
+# [0.8.0](https://github.com/xue-moe/i18n-smell-detector/compare/v0.7.2...v0.8.0) (2026-07-13)
+
+
+### Bug Fixes
+
+* **config:** reject unknown configuration options ([725d85a](https://github.com/xue-moe/i18n-smell-detector/commit/725d85a632e9cb081c1117c4832511625c73747f))
+* **hardcoded:** distinguish technical identifiers ([1f1ec90](https://github.com/xue-moe/i18n-smell-detector/commit/1f1ec9079c755f0babc72f1d98d521e826e88da8))
+* harden source ranges and baseline loading ([aad54c8](https://github.com/xue-moe/i18n-smell-detector/commit/aad54c866883f7f652cb48b3f2d8b811c4ddd508))
+* **placeholders:** compare placeholder occurrence counts ([cf50c53](https://github.com/xue-moe/i18n-smell-detector/commit/cf50c53b116714fc5f53806c26b144800cbc4096))
+
+
+### Features
+
+* **baseline:** add contextual fingerprints ([8b3213c](https://github.com/xue-moe/i18n-smell-detector/commit/8b3213c2ecfefca1e7eb0bfe714a1b155f765bd8))
+* **cli:** add version option ([f3c3460](https://github.com/xue-moe/i18n-smell-detector/commit/f3c34600c6c108c462f9aee02f4f5bc9f4e8f0ff))
+* **hardcoded:** add configurable message sinks ([2071b1a](https://github.com/xue-moe/i18n-smell-detector/commit/2071b1a6d9b944a72e53e79b184c62f20d10ba0b))
+* **placeholders:** make dollar-number patterns opt-in ([7cffe53](https://github.com/xue-moe/i18n-smell-detector/commit/7cffe530e3fa470e0844975d0d6d3c8f3b3538ef))
+* **source:** add complete finding ranges ([5fa8d1d](https://github.com/xue-moe/i18n-smell-detector/commit/5fa8d1d19cad4eef973290447df8e9789b57efa5))
+* **vue:** scan strings in template expressions ([9c489f1](https://github.com/xue-moe/i18n-smell-detector/commit/9c489f10c9430cb95767c06172f8f30c8c32b39b))
+
 ## Unreleased
 
 ### Changed
