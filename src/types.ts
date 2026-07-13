@@ -1,4 +1,6 @@
 export type Severity = 'ignored' | 'low' | 'medium' | 'high';
+export type Confidence = 'low' | 'medium' | 'high';
+export type HardcodedCategory = 'natural-language' | 'technical-identifier' | 'format' | 'code' | 'unknown';
 export type ReportFormat = 'console' | 'json' | 'markdown' | 'sarif' | 'html';
 export type FailOnLevel = 'none' | 'low' | 'medium' | 'high';
 export type ConfigPreset = 'recommended' | 'strict';
@@ -47,6 +49,7 @@ export interface HardcodedConfig {
   ignoreValues: Rule[];
   ignorePatterns: RegExp[];
   sinks: HardcodedSinks;
+  technicalTerms: Rule[];
 }
 
 export interface HardcodedCallSink {
@@ -126,6 +129,8 @@ export interface HardcodedIssue {
   interpolations?: MessageInterpolation[];
   contextHash?: string;
   relativeRange?: { start: number; end: number };
+  confidence?: Confidence;
+  category?: HardcodedCategory;
 }
 
 export interface PlaceholderIssue {

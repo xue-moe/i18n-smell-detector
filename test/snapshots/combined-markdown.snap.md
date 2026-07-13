@@ -22,9 +22,9 @@ high=1 medium=2 low=0 ignored=1
 
 | Level | Location | Value | Reason |
 |---|---|---|---|
-| high | src/components/UserPanel.vue:3:9 | Account settings | static template text |
-| medium | src/components/UserPanel.vue:4:24 | Search | static placeholder attribute |
-| medium | src/components/UserPanel.vue:5:13 | Save | static template text |
+| high | src/components/UserPanel.vue:3:9 | Account settings | static template text (confidence: high; category: natural-language) |
+| medium | src/components/UserPanel.vue:4:24 | Search | static placeholder attribute (confidence: medium; category: natural-language) |
+| medium | src/components/UserPanel.vue:5:13 | Save | static template text (confidence: medium; category: natural-language) |
 
 ## Placeholder mismatches
 

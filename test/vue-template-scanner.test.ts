@@ -138,3 +138,10 @@ test('scanVueTemplate applies line offsets to expression findings', () => {
   assert.equal(issue.range?.start.line, 8);
   assert.equal(issue.range?.start.offset, 14);
 });
+
+test('scanVueTemplate lowers confidence for code element content', () => {
+  const [issue] = scanVueTemplate('<code>Example output</code>', { file: 'Component.vue', config });
+  assert.equal(issue.severity, 'low');
+  assert.equal(issue.confidence, 'low');
+  assert.equal(issue.category, 'code');
+});

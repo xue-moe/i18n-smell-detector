@@ -80,6 +80,8 @@ function toSarifResult(issue: IssueWithCheck): Record<string, unknown> {
       contextHash: isHardcodedIssue(issue) ? issue.contextHash : undefined,
       relativeRange: isHardcodedIssue(issue) ? issue.relativeRange : undefined,
       suppression: 'suppression' in issue ? issue.suppression : undefined,
+      confidence: isHardcodedIssue(issue) ? issue.confidence : undefined,
+      category: isHardcodedIssue(issue) ? issue.category : undefined,
     },
   };
 

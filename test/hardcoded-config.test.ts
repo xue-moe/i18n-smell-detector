@@ -20,6 +20,7 @@ test('loadConfig applies hardcoded defaults', async () => {
     assert.deepEqual(config.hardcoded.ignoreFiles, []);
     assert.deepEqual(config.hardcoded.ignoreValues, []);
     assert.deepEqual(config.hardcoded.ignorePatterns, []);
+    assert.deepEqual(config.hardcoded.technicalTerms, []);
     assert.deepEqual(config.hardcoded.sinks, { calls: [], assignments: [], properties: [] });
   } finally {
     await rm(tempDir, { recursive: true, force: true });

@@ -38,7 +38,7 @@ export function renderMarkdownReport(issues: DetectorIssue[], options: ReportOpt
   for (const issue of visible) {
     if (isHardcodedIssue(issue)) {
       lines.push(
-        `| ${escapeCell(issue.severity)} | ${escapeCell(formatLocation(issue))} | ${escapeCell(issue.value)} | ${escapeCell(issue.reason)} |`,
+        `| ${escapeCell(issue.severity)} | ${escapeCell(formatLocation(issue))} | ${escapeCell(issue.value)} | ${escapeCell(formatHardcodedReason(issue))} |`,
       );
     } else {
       if (isPlaceholderIssue(issue)) {
@@ -54,6 +54,12 @@ export function renderMarkdownReport(issues: DetectorIssue[], options: ReportOpt
   }
 
   return `${lines.join('\n')}\n`;
+}
+
+function formatHardcodedReason(issue: HardcodedIssue): string {
+  return issue.confidence && issue.category
+    ? `${issue.reason} (confidence: ${issue.confidence}; category: ${issue.category})`
+    : issue.reason;
 }
 
 function formatLocation(issue: DetectorIssue): string {

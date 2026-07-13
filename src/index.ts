@@ -1,6 +1,7 @@
 export type {
   CheckName,
   CheckResult,
+  Confidence,
   DetectorChecks,
   DetectorConfig,
   DetectorConfigInput,
@@ -8,6 +9,7 @@ export type {
   DoNotTranslateRule,
   FailOnLevel,
   HardcodedConfig,
+  HardcodedCategory,
   HardcodedConfigInput,
   HardcodedCallSink,
   HardcodedIssue,

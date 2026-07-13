@@ -54,6 +54,8 @@
       "nodeType": "Text",
       "parentNodeType": "Element",
       "containsInterpolation": false,
+      "confidence": "high",
+      "category": "natural-language",
       "contextHash": "031ada8157f7057f5d5e",
       "relativeRange": {
         "start": 4,
@@ -85,6 +87,8 @@
       "nodeType": "Attribute",
       "parentNodeType": "Element",
       "containsInterpolation": false,
+      "confidence": "medium",
+      "category": "natural-language",
       "contextHash": "1e934c6ad6236e46aaa3",
       "relativeRange": {
         "start": 19,
@@ -116,6 +120,8 @@
       "nodeType": "Text",
       "parentNodeType": "Element",
       "containsInterpolation": false,
+      "confidence": "medium",
+      "category": "natural-language",
       "contextHash": "3f86a70c2f3bbae22722",
       "relativeRange": {
         "start": 8,

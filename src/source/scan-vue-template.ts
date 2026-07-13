@@ -1,6 +1,13 @@
 import { NodeTypes, parse } from '@vue/compiler-dom';
 import { classifyHardcoded } from '../rules/classify-hardcoded.js';
-import type { HardcodedConfig, HardcodedIssue, Severity, SourceRange } from '../types.js';
+import type {
+  Confidence,
+  HardcodedCategory,
+  HardcodedConfig,
+  HardcodedIssue,
+  Severity,
+  SourceRange,
+} from '../types.js';
 import { scanExpressionStrings } from './scan-expression-strings.js';
 import { rangeFromOffsets, sourceAnchor } from './source-range.js';
 
@@ -25,6 +32,7 @@ type VueNode = {
   isStatic?: boolean;
   arg?: VueNode;
   exp?: VueNode;
+  tag?: string;
   value?: {
     content: string;
     loc: VueLocation;
@@ -54,6 +62,8 @@ function makeIssue({
   parentNodeType,
   containsInterpolation,
   contextLoc,
+  confidence,
+  category,
 }: {
   file: string;
   lineOffset: number;
@@ -69,6 +79,8 @@ function makeIssue({
   parentNodeType?: string;
   containsInterpolation: boolean;
   contextLoc?: VueLocation;
+  confidence: Confidence;
+  category: HardcodedCategory;
 }): HardcodedIssue {
   const range = resolveRange(template, loc, { fileSource, sourceOffset, lineOffset });
   const anchor = contextLoc
@@ -86,6 +98,8 @@ function makeIssue({
     nodeType,
     parentNodeType,
     containsInterpolation,
+    confidence,
+    category,
     ...anchor,
   };
 }
@@ -105,6 +119,8 @@ function scanValue({
   parentNodeType,
   containsInterpolation = false,
   contextLoc,
+  elementName,
+  attributeName,
 }: {
   file: string;
   lineOffset: number;
@@ -120,11 +136,19 @@ function scanValue({
   parentNodeType?: string;
   containsInterpolation?: boolean;
   contextLoc?: VueLocation;
+  elementName?: string;
+  attributeName?: string;
 }): HardcodedIssue | null {
   const text = normalizeText(value);
   if (!text) return null;
 
-  const classification = classifyHardcoded(text, config);
+  const classification = classifyHardcoded(text, config, {
+    kind,
+    nodeType,
+    parentNodeType,
+    elementName,
+    attributeName,
+  });
   return makeIssue({
     file,
     lineOffset,
@@ -140,6 +164,8 @@ function scanValue({
     parentNodeType,
     containsInterpolation,
     contextLoc,
+    confidence: classification.confidence,
+    category: classification.category,
   });
 }
 
@@ -191,6 +217,7 @@ export function scanVueTemplate(
         nodeType: vueNodeType(node.type),
         parentNodeType: parent ? vueNodeType(parent.type) : undefined,
         contextLoc: parent?.loc,
+        elementName: parent?.tag,
       });
       if (issue) issues.push(issue);
       return;
@@ -252,6 +279,8 @@ export function scanVueTemplate(
         nodeType: vueNodeType(prop.type),
         parentNodeType: vueNodeType(node.type),
         contextLoc: node.loc,
+        elementName: node.tag,
+        attributeName: prop.name,
       });
       if (issue) issues.push(issue);
     }
@@ -301,7 +330,11 @@ function scanVueExpression({
   for (const finding of strings) {
     const text = normalizeText(finding.value);
     if (!text) continue;
-    const classification = classifyHardcoded(text, config);
+    const classification = classifyHardcoded(text, config, {
+      kind,
+      nodeType: finding.nodeType,
+      parentNodeType: finding.expressionKind,
+    });
     const range =
       !fileSource && lineOffset
         ? {
@@ -326,6 +359,8 @@ function scanVueExpression({
       containsInterpolation: finding.containsInterpolation,
       rawValue: finding.rawValue,
       interpolations: finding.interpolations,
+      confidence: classification.confidence,
+      category: classification.category,
       ...anchor,
     });
   }

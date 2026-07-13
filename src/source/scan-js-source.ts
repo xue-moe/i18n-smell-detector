@@ -70,7 +70,11 @@ function makeIssue({
   const range = resolveNodeRange(source, node, { fileSource, sourceOffset, lineOffset });
   if (!text || !range) return null;
 
-  const classification = classifyHardcoded(text, config);
+  const classification = classifyHardcoded(text, config, {
+    kind,
+    nodeType: node?.type,
+    parentNodeType: parentNode?.type,
+  });
   const anchor = anchorFor(source, node, parentNode);
   return {
     file,
@@ -84,6 +88,8 @@ function makeIssue({
     nodeType: node?.type,
     parentNodeType: parentNode?.type,
     containsInterpolation: node?.type === 'TemplateLiteral' && asArray(node.expressions).length > 0,
+    confidence: classification.confidence,
+    category: classification.category,
     ...anchor,
   };
 }
@@ -147,7 +153,11 @@ export function scanJsText(
     })) {
       const text = normalizeText(candidate.value);
       if (!text) continue;
-      const classification = classifyHardcoded(text, config);
+      const classification = classifyHardcoded(text, config, {
+        kind,
+        nodeType: candidate.nodeType,
+        parentNodeType: parentNode.type,
+      });
       const childStart = (candidate.range.start.offset ?? sourceOffset) - (fileSource ? sourceOffset : 0);
       const childEnd = (candidate.range.end.offset ?? sourceOffset) - (fileSource ? sourceOffset : 0);
       const anchor = anchorForOffsets(source, parentNode, childStart, childEnd);
@@ -165,6 +175,8 @@ export function scanJsText(
         nodeType: candidate.nodeType,
         parentNodeType: parentNode.type,
         containsInterpolation: candidate.containsInterpolation,
+        confidence: classification.confidence,
+        category: classification.category,
         ...anchor,
       });
     }

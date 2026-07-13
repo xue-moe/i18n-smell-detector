@@ -75,6 +75,7 @@ const HARDCODED_KEYS = new Set([
   'ignoreValues',
   'ignorePatterns',
   'sinks',
+  'technicalTerms',
 ]);
 const SINK_KEYS = new Set(['calls', 'assignments', 'properties']);
 const CALL_SINK_KEYS = new Set(['callee', 'arguments']);
@@ -257,6 +258,7 @@ function validateConfig(config: unknown): asserts config is DetectorConfigInput 
   }
   validateRuleList(hardcoded.ignoreValues, 'hardcoded.ignoreValues');
   validateRuleList(hardcoded.ignorePatterns, 'hardcoded.ignorePatterns');
+  validateRuleList(hardcoded.technicalTerms, 'hardcoded.technicalTerms');
 
   if ('sinks' in hardcoded && !isRecord(hardcoded.sinks)) {
     throw appError('Config hardcoded.sinks must be an object', 'CONFIG_INVALID');
@@ -386,6 +388,7 @@ function normalizeHardcodedConfig(config: HardcodedConfigInput): HardcodedConfig
       assignments: config.sinks?.assignments || [],
       properties: config.sinks?.properties || [],
     },
+    technicalTerms: config.technicalTerms || [],
   };
 }
 

@@ -56,6 +56,9 @@ function formatDetails(issue: DetectorIssue): string[] {
   if ('suppression' in issue && issue.suppression) {
     details.push(`do-not-translate: ${issue.suppression.category} (${issue.suppression.reason})`);
   }
+  if (isHardcodedIssue(issue) && issue.confidence && issue.category) {
+    details.push(`confidence: ${issue.confidence}; category: ${issue.category}`);
+  }
   return details;
 }
 
