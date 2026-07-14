@@ -28,3 +28,23 @@ test('loadFlattenedLocales reports missing locale files clearly', async () => {
     await rm(tempDir, { recursive: true, force: true });
   }
 });
+
+test('loadFlattenedLocales identifies invalid locale files', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-'));
+
+  try {
+    await writeFile(path.join(tempDir, 'collision.json'), JSON.stringify({ 'user.name': 'A', user: { name: 'B' } }));
+    await writeFile(path.join(tempDir, 'unsupported.json'), JSON.stringify({ count: 1 }));
+
+    await assert.rejects(
+      loadFlattenedLocales({ baseLocale: 'en', locales: { en: './collision.json' } }, tempDir),
+      /Failed to flatten locale file: \.\/collision\.json\nReason: Flattened locale key collision at "user\.name"/,
+    );
+    await assert.rejects(
+      loadFlattenedLocales({ baseLocale: 'en', locales: { en: './unsupported.json' } }, tempDir),
+      /Failed to flatten locale file: \.\/unsupported\.json\nReason: Unsupported locale value at "count": expected a string; received number/,
+    );
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});

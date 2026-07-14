@@ -36,7 +36,12 @@ export async function loadFlattenedLocales(
 
   for (const [locale, localePath] of Object.entries(config.locales || {})) {
     const absolutePath = path.isAbsolute(localePath) ? localePath : path.resolve(cwd, localePath);
-    locales[locale] = flattenLocale(await readJson(absolutePath, localePath));
+    const input = await readJson(absolutePath, localePath);
+    try {
+      locales[locale] = flattenLocale(input);
+    } catch (error) {
+      throw new Error(`Failed to flatten locale file: ${localePath}\nReason: ${readErrorReason(error)}`);
+    }
   }
 
   if (!locales[config.baseLocale]) {
