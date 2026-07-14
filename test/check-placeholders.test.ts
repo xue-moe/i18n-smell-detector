@@ -45,6 +45,33 @@ test('dollar-number placeholders are opt-in to avoid matching currency', async (
   }
 });
 
+test('public placeholder APIs normalize non-global patterns without mutating callers', () => {
+  const nonGlobalPattern = /\{[a-z]+\}/i;
+  const statefulPattern = /\{[a-z]+\}/gi;
+  statefulPattern.lastIndex = 8;
+
+  assert.deepEqual(extractPlaceholders('{Name} and {COUNT}', [nonGlobalPattern]), ['{COUNT}', '{Name}']);
+  assert.deepEqual(extractPlaceholders('{First} and {SECOND}', [statefulPattern]), ['{First}', '{SECOND}']);
+  assert.equal(nonGlobalPattern.flags, 'i');
+  assert.equal(statefulPattern.lastIndex, 8);
+
+  const issues = checkPlaceholders(
+    {
+      en: { greeting: 'Hello {first} and {second}' },
+      fr: { greeting: 'Bonjour {first}' },
+    },
+    {
+      baseLocale: 'en',
+      placeholderPatterns: [/\{[^}]+\}/],
+    },
+  );
+
+  assert.deepEqual(
+    issues.map(({ missing, extra }) => ({ missing, extra })),
+    [{ missing: ['{second}'], extra: [] }],
+  );
+});
+
 test('checkPlaceholders reports missing and extra target placeholders', async () => {
   const { config, tempDir } = await loadDefaultConfig();
 

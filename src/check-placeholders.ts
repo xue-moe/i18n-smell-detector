@@ -17,8 +17,7 @@ export function extractPlaceholders(value: string, patterns: RegExp[]) {
   const text = String(value);
 
   for (const pattern of patterns) {
-    pattern.lastIndex = 0;
-    for (const match of text.matchAll(pattern)) {
+    for (const match of text.matchAll(asGlobalPattern(pattern))) {
       placeholders.add(match[0]);
     }
   }
@@ -31,14 +30,18 @@ function countPlaceholders(value: string, patterns: RegExp[]): Map<string, numbe
   const text = String(value);
 
   for (const pattern of patterns) {
-    pattern.lastIndex = 0;
-    for (const match of text.matchAll(pattern)) {
+    for (const match of text.matchAll(asGlobalPattern(pattern))) {
       const placeholder = match[0];
       counts.set(placeholder, (counts.get(placeholder) ?? 0) + 1);
     }
   }
 
   return counts;
+}
+
+function asGlobalPattern(pattern: RegExp): RegExp {
+  const flags = pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`;
+  return new RegExp(pattern.source, flags);
 }
 
 function difference(expected: Map<string, number>, actual: Map<string, number>): string[] {
