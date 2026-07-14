@@ -5,7 +5,7 @@ import { scanVueTemplate } from '../dist/source/scan-vue-template.js';
 
 const config = {
   hardcoded: {
-    vueAttributes: ['placeholder', 'title', 'alt', 'aria-label', 'aria-description'],
+    vueAttributes: ['placeholder', 'title', 'alt', 'aria-label', 'aria-description', 'label'],
     ignoreValues: [],
     ignorePatterns: [],
   },
@@ -125,6 +125,58 @@ test('scanVueTemplate detects strings in interpolations and bound attributes', (
   assert.equal(hello?.rawValue, '`Hello ${name}`');
   assert.equal(hello?.interpolations?.[0].placeholder, 'name');
   assert.equal(hello?.interpolations?.[0].expression, 'name');
+});
+
+test('scanVueTemplate limits bound expressions to configured Vue attributes', () => {
+  const template =
+    `<div :class="active ? 'bg-orange-50 text-orange-700' : 'text-slate-700'" ` +
+    `:key="\`${'${item.id}'}-detail\`" :style="\`color: ${'${color}'}\`" />` +
+    `<img :loading="first ? 'eager' : 'lazy'" :fetchpriority="first ? 'high' : 'auto'" />` +
+    `<component :is="clickable ? 'router-link' : 'div'" />` +
+    `<input :type="showPassword ? 'text' : 'password'" ` +
+    `:placeholder="loading ? 'Loading...' : 'Search'" />` +
+    `<button :aria-label="expanded ? 'Collapse' : 'Expand'" />`;
+
+  const issues = scanVueTemplate(template, { file: 'Component.vue', config }).filter(
+    (issue) => issue.severity !== 'ignored',
+  );
+
+  assert.deepEqual(
+    issues.map((issue) => [issue.kind, issue.value]),
+    [
+      ['vue-bind:placeholder', 'Loading...'],
+      ['vue-bind:placeholder', 'Search'],
+      ['vue-bind:aria-label', 'Collapse'],
+      ['vue-bind:aria-label', 'Expand'],
+    ],
+  );
+});
+
+test('scanVueTemplate scans configured bound component props and skips dynamic arguments', () => {
+  const customConfig = {
+    hardcoded: {
+      ...config.hardcoded,
+      vueAttributes: [...config.hardcoded.vueAttributes, 'variant'],
+    },
+  };
+  const template =
+    `<ExampleWidget :variant="enabled ? 'Active state' : 'Inactive state'" />` +
+    `<div v-bind:[attributeName]="enabled ? 'Dynamic label' : 'Other label'" />` +
+    `<p>{{ enabled ? 'Visible value' : 'Hidden value' }}</p>`;
+
+  const issues = scanVueTemplate(template, { file: 'Component.vue', config: customConfig }).filter(
+    (issue) => issue.severity !== 'ignored',
+  );
+
+  assert.deepEqual(
+    issues.map((issue) => [issue.kind, issue.value]),
+    [
+      ['vue-bind:variant', 'Active state'],
+      ['vue-bind:variant', 'Inactive state'],
+      ['vue-interpolation', 'Visible value'],
+      ['vue-interpolation', 'Hidden value'],
+    ],
+  );
 });
 
 test('scanVueTemplate applies line offsets to expression findings', () => {

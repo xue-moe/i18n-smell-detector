@@ -243,8 +243,15 @@ export function scanVueTemplate(
     if (node.type !== NodeTypes.ELEMENT) return;
 
     for (const prop of node.props || []) {
-      if (prop.type === NodeTypes.DIRECTIVE && prop.name === 'bind' && prop.exp) {
-        const attribute = prop.arg?.isStatic && typeof prop.arg.content === 'string' ? prop.arg.content : 'dynamic';
+      if (
+        prop.type === NodeTypes.DIRECTIVE &&
+        prop.name === 'bind' &&
+        prop.exp &&
+        prop.arg?.isStatic &&
+        typeof prop.arg.content === 'string' &&
+        attributes.has(prop.arg.content)
+      ) {
+        const attribute = prop.arg.content;
         scanVueExpression({
           expression: prop.exp,
           file,
