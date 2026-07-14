@@ -52,6 +52,8 @@ export default {
 
 Locale keys that contain `-`, such as `'zh-Hans'`, must be quoted.
 
+With `ignoreSameLanguageFamily` enabled, locale tags are compared by language, inferred script, and explicitly declared region. Different scripts are checked normally, two different explicit regions are reported at low severity, and otherwise matching language and script are ignored. The last case includes comparisons where one or both locale tags do not explicitly declare a region.
+
 ## Commands
 
 ```bash

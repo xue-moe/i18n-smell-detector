@@ -2,6 +2,13 @@ import { matchesAnyRule } from './match-rule.js';
 import type { DetectorConfig, IssueSuppression, Severity } from '../types.js';
 
 type Classification = { severity: Severity; reason: string; suppression?: IssueSuppression };
+type LocaleRelationship = 'different-language' | 'different-script' | 'different-region' | 'same-language-and-script';
+
+interface ParsedLocale {
+  language: string;
+  script?: string;
+  explicitRegion?: string;
+}
 
 const BUILTIN_TECHNICAL_ACRONYMS = new Set([
   'API',
@@ -104,8 +111,72 @@ function getLatinWords(value: string): string[] {
   return value.match(/[\p{L}\p{M}][\p{L}\p{M}']*/gu) || [];
 }
 
-function languageFamily(locale: string): string {
-  return locale.toLowerCase().split(/[-_]/)[0];
+function normalizeLocaleTag(locale: string): string {
+  return locale.trim().replaceAll('_', '-');
+}
+
+function fallbackLanguage(locale: string): string {
+  return normalizeLocaleTag(locale).split('-').find(Boolean)?.toLowerCase() ?? '';
+}
+
+function parseLocale(locale: string): ParsedLocale | undefined {
+  if (typeof Intl !== 'object' || typeof Intl.Locale !== 'function') return undefined;
+
+  try {
+    const parsed = new Intl.Locale(normalizeLocaleTag(locale));
+    const maximized = parsed.maximize();
+    return {
+      language: parsed.language.toLowerCase(),
+      script: parsed.script?.toLowerCase() ?? (parsed.language === 'und' ? undefined : maximized.script?.toLowerCase()),
+      explicitRegion: parsed.region?.toUpperCase(),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+function localeRelationship(baseLocale: string, targetLocale: string): LocaleRelationship {
+  const base = parseLocale(baseLocale);
+  const target = parseLocale(targetLocale);
+
+  if (!base || !target) {
+    return fallbackLanguage(baseLocale) === fallbackLanguage(targetLocale)
+      ? 'same-language-and-script'
+      : 'different-language';
+  }
+
+  if (base.language !== target.language) return 'different-language';
+  if (base.script !== undefined && target.script !== undefined && base.script !== target.script) {
+    return 'different-script';
+  }
+  if (
+    base.explicitRegion !== undefined &&
+    target.explicitRegion !== undefined &&
+    base.explicitRegion !== target.explicitRegion
+  ) {
+    return 'different-region';
+  }
+  return 'same-language-and-script';
+}
+
+function classifyLocaleRelationship(
+  baseLocale: string,
+  targetLocale: string,
+  ignoreSameLanguageFamily: boolean,
+): Classification | undefined {
+  if (!ignoreSameLanguageFamily) return undefined;
+
+  const relationship = localeRelationship(baseLocale, targetLocale);
+  if (relationship === 'same-language-and-script') {
+    return { severity: 'ignored', reason: 'same language and script' };
+  }
+  if (relationship === 'different-region') {
+    return {
+      severity: 'low',
+      reason: 'same language and script with different explicit regions',
+    };
+  }
+  return undefined;
 }
 
 function isShortCommonLabel(value: string): boolean {
@@ -147,16 +218,20 @@ export function classifyIdentical({
     return { severity: 'ignored', reason: 'allowed value' };
   }
 
-  if ((config.ignoreSameLanguageFamily ?? true) && languageFamily(baseLocale) === languageFamily(targetLocale)) {
-    return { severity: 'ignored', reason: 'same language family' };
-  }
-
   if (isBlank(value)) return { severity: 'ignored', reason: 'blank value' };
   if (isPlaceholderOnly(value, config.placeholderPatterns || []))
     return { severity: 'ignored', reason: 'placeholder only' };
   if (isExternalReference(value)) return { severity: 'ignored', reason: 'external reference' };
   if ((config.ignoreCodeLike ?? true) && isCodeLike(key, value))
     return { severity: 'ignored', reason: 'code-like value' };
+
+  const localeClassification = classifyLocaleRelationship(
+    baseLocale,
+    targetLocale,
+    config.ignoreSameLanguageFamily ?? true,
+  );
+  if (localeClassification) return localeClassification;
+
   if (isShortCommonLabel(value)) return { severity: 'low', reason: 'short common label' };
 
   const words = getLatinWords(value);
