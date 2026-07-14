@@ -127,6 +127,39 @@ test('scanVueTemplate detects strings in interpolations and bound attributes', (
   assert.equal(hello?.interpolations?.[0].expression, 'name');
 });
 
+test('scanVueTemplate scans hardcoded branches mixed with i18n calls', () => {
+  const template = `
+    <p>{{ failed ? 'Request failed' : $t('common.success') }}</p>
+    <Button
+      :title="ready ? $t('common.ready') : 'Retry later'"
+    />
+  `;
+
+  const issues = scanVueTemplate(template, { file: 'Component.vue', config }).filter(
+    (issue) => issue.severity !== 'ignored',
+  );
+
+  assert.deepEqual(
+    issues.map((issue) => issue.value),
+    ['Request failed', 'Retry later'],
+  );
+});
+
+test('scanVueTemplate does not report translation keys', () => {
+  const issues = scanVueTemplate(
+    `
+      <p>{{ $t('common.success') }}</p>
+      <Button :title="$t('common.ready')" />
+    `,
+    {
+      file: 'Component.vue',
+      config,
+    },
+  );
+
+  assert.equal(issues.filter((issue) => issue.severity !== 'ignored').length, 0);
+});
+
 test('scanVueTemplate limits bound expressions to configured Vue attributes', () => {
   const template =
     `<div :class="active ? 'bg-orange-50 text-orange-700' : 'text-slate-700'" ` +

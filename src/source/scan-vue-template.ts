@@ -321,7 +321,7 @@ function scanVueExpression({
   config: HardcodedScanConfig;
   issues: HardcodedIssue[];
 }): void {
-  if (typeof expression.content !== 'string' || isI18nExpression(expression.content)) return;
+  if (typeof expression.content !== 'string') return;
 
   let strings;
   try {
