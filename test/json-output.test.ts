@@ -12,7 +12,7 @@ test('renderJsonReport includes summary and keeps issue fields', () => {
           targetLocale: 'zh',
           value: 'Welcome back',
           severity: 'high',
-          reason: 'copied English phrase',
+          reason: 'copied base-locale phrase',
         },
         {
           key: 'brand.name',

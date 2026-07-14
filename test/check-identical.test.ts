@@ -12,7 +12,7 @@ const config = {
   ignoreCase: false,
 };
 
-test('checkIdenticalTranslations classifies copied English text', () => {
+test('checkIdenticalTranslations classifies copied base-locale text', () => {
   const issues = checkIdenticalTranslations(
     {
       en: {
@@ -42,21 +42,21 @@ test('checkIdenticalTranslations classifies copied English text', () => {
   assert.equal(issues.find((issue) => issue.targetLocale === 'en-GB')?.severity, 'ignored');
 });
 
-test('checkIdenticalTranslations recognizes Unicode letter words', () => {
+test('checkIdenticalTranslations uses language-neutral reasons for Unicode letter words', () => {
   const issues = checkIdenticalTranslations(
     {
-      en: {
+      fr: {
         'profile.bio': 'Résumé naïve',
       },
       zh: {
         'profile.bio': 'Résumé naïve',
       },
     },
-    config,
+    { ...config, baseLocale: 'fr' },
   );
 
   assert.equal(issues[0].severity, 'high');
-  assert.equal(issues[0].reason, 'copied English phrase');
+  assert.equal(issues[0].reason, 'copied base-locale phrase');
 });
 
 test('checkIdenticalTranslations applies categorized do-not-translate rules with metadata', () => {

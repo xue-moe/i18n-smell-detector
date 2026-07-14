@@ -14,7 +14,7 @@ high=1 medium=0 low=0 ignored=2
 
 | Level | Locale | Key | Value | Reason |
 |---|---|---|---|---|
-| high | zh | home.title | Welcome back | copied English phrase |
+| high | zh | home.title | Welcome back | copied base-locale phrase |
 
 ## Hardcoded strings
 

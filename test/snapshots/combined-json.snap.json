@@ -27,7 +27,7 @@
       "targetLocale": "zh",
       "value": "Welcome back",
       "severity": "high",
-      "reason": "copied English phrase",
+      "reason": "copied base-locale phrase",
       "id": "identical:zh:home.title"
     },
     {

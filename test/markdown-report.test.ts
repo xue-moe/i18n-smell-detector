@@ -17,7 +17,7 @@ test('combined Markdown output groups checks with a summary table', () => {
             targetLocale: 'zh',
             value: 'Welcome back',
             severity: 'high',
-            reason: 'copied English phrase',
+            reason: 'copied base-locale phrase',
           },
         ],
       },

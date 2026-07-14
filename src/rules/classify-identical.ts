@@ -96,11 +96,11 @@ export function classifyIdentical({
   const hasSentencePunctuation = /[.!?。！？]/.test(value);
 
   if (words.length >= 2 || (words.length === 1 && hasSentencePunctuation)) {
-    return { severity: 'high', reason: 'copied English phrase' };
+    return { severity: 'high', reason: 'copied base-locale phrase' };
   }
 
   if (words.length === 1) {
-    return { severity: 'medium', reason: 'copied English word' };
+    return { severity: 'medium', reason: 'copied base-locale word' };
   }
 
   return { severity: 'low', reason: 'same text as base locale' };
