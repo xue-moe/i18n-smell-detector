@@ -14,7 +14,10 @@ type BaselineIssue = {
   id: string;
   value: string;
   key?: string;
+  baseLocale?: string;
   targetLocale?: string;
+  missing?: string[];
+  extra?: string[];
   file?: string;
   line?: number;
   column?: number;
@@ -37,8 +40,7 @@ function errorMessage(error: unknown): string {
 
 export function issueId(check: CustomCheckName, issue: DetectorIssue): string {
   if (!isHardcodedIssue(issue) && (check === 'identical' || check === 'placeholders')) {
-    const localeIssue = issue as IdenticalIssue | PlaceholderIssue;
-    return `${check}:${localeIssue.targetLocale}:${localeIssue.key}`;
+    return localeIssueId(check, issue as IdenticalIssue | PlaceholderIssue);
   }
   const hardcodedIssue = issue as HardcodedIssue;
   const fingerprint = JSON.stringify({
@@ -70,7 +72,12 @@ export async function loadBaseline(filePath: string | undefined): Promise<Set<st
     throw new Error(`Invalid baseline file: ${filePath}`);
   }
   const version = (parsed as { version?: unknown }).version;
-  if (version !== undefined && version !== 1 && version !== 2 && version !== 3) {
+  if (version === undefined || version === 1 || version === 2 || version === 3) {
+    throw new Error(
+      `Baseline version ${version === undefined ? 'legacy' : String(version)} in ${filePath} must be regenerated with --update-baseline`,
+    );
+  }
+  if (version !== 4) {
     throw new Error(`Unsupported baseline version in ${filePath}: ${String(version)}`);
   }
 
@@ -105,7 +112,7 @@ export async function writeBaseline(filePath: string, results: CheckResult[]): P
   }
 
   await mkdir(path.dirname(filePath), { recursive: true });
-  await writeFile(filePath, `${JSON.stringify({ version: 3, issues }, null, 2)}\n`);
+  await writeFile(filePath, `${JSON.stringify({ version: 4, issues }, null, 2)}\n`);
   return issues.length;
 }
 
@@ -120,7 +127,14 @@ function toBaselineIssue(check: CustomCheckName, issue: DetectorIssue): Baseline
     return {
       ...base,
       key: localeIssue.key,
+      baseLocale: localeIssue.baseLocale,
       targetLocale: localeIssue.targetLocale,
+      ...(check === 'placeholders'
+        ? {
+            missing: [...(localeIssue as PlaceholderIssue).missing].sort(),
+            extra: [...(localeIssue as PlaceholderIssue).extra].sort(),
+          }
+        : {}),
     };
   }
 
@@ -165,6 +179,28 @@ function legacyIssueId(check: CustomCheckName, issue: DetectorIssue): string {
 
 function normalizeFindingValue(value: string): string {
   return value.normalize('NFKC').replace(/\s+/gu, ' ').trim();
+}
+
+function localeIssueId(check: 'identical' | 'placeholders', issue: IdenticalIssue | PlaceholderIssue): string {
+  const fingerprint =
+    check === 'identical'
+      ? {
+          check,
+          key: issue.key,
+          baseLocale: issue.baseLocale,
+          targetLocale: issue.targetLocale,
+          value: normalizeFindingValue(issue.value),
+        }
+      : {
+          check,
+          key: issue.key,
+          baseLocale: issue.baseLocale,
+          targetLocale: issue.targetLocale,
+          missing: [...(issue as PlaceholderIssue).missing].map(normalizeFindingValue).sort(),
+          extra: [...(issue as PlaceholderIssue).extra].map(normalizeFindingValue).sort(),
+        };
+  const digest = createHash('sha256').update(JSON.stringify(fingerprint)).digest('hex').slice(0, 20);
+  return `${check}:v4:${digest}`;
 }
 
 function isHardcodedIssue(issue: DetectorIssue): issue is HardcodedIssue {

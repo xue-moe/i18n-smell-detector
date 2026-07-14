@@ -28,7 +28,7 @@
       "value": "Welcome back",
       "severity": "high",
       "reason": "copied base-locale phrase",
-      "id": "identical:zh:home.title"
+      "id": "identical:v4:43d356a9d68d89734ff4"
     },
     {
       "check": "hardcoded",

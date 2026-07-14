@@ -36,6 +36,12 @@
 
 ## Unreleased
 
+### Breaking Changes
+
+- Baseline schema version 4 makes identical-translation IDs sensitive to the copied value and placeholder IDs
+  sensitive to the missing and extra placeholders. Baseline files created by earlier versions must be regenerated
+  with `--update-baseline`.
+
 ### Changed
 
 - Dollar-number placeholders such as `$1` are no longer detected by default because they are indistinguishable

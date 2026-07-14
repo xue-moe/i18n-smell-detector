@@ -4,7 +4,6 @@ import { spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
 
 const bin = path.resolve('bin/i18n-smell-detector.js');
 
@@ -93,8 +92,8 @@ test('baseline update writes current issues', async () => {
 
     assert.equal(result.status, 0);
     const parsed = parseIssuesJson(await readFile(baseline, 'utf8'));
-    assert.equal(parsed.version, 3);
-    assert.ok(parsed.issues.some((issue) => issue.id === 'identical:zh:home.title'));
+    assert.equal(parsed.version, 4);
+    assert.ok(parsed.issues.some((issue) => issue.id?.startsWith('identical:v4:')));
     assert.ok(parsed.issues.some((issue) => issue.id?.startsWith('hardcoded:v3:')));
   } finally {
     await rm(tempDir, { recursive: true, force: true });
@@ -106,40 +105,38 @@ test('baseline suppresses known issues but leaves new issues failing', async () 
   const baseline = path.join(tempDir, 'baseline.json');
 
   try {
-    await writeFile(
+    await writeBasicProject(tempDir);
+    const update = run([
+      'check',
+      '--config',
+      path.join(tempDir, 'i18n-smell.config.mjs'),
+      '--baseline',
       baseline,
-      JSON.stringify({
-        version: 1,
-        issues: [
-          {
-            id: 'identical:zh:home.title',
-            key: 'home.title',
-            targetLocale: 'zh',
-            value: 'Welcome back',
-          },
-        ],
-      }),
-    );
+      '--update-baseline',
+    ]);
+    assert.equal(update.status, 0, update.stderr);
+
+    const componentPath = path.join(tempDir, 'src/components/UserPanel.vue');
+    const component = await readFile(componentPath, 'utf8');
+    await writeFile(componentPath, component.replace('Save', 'New warning'));
 
     const result = run([
       'check',
       '--config',
-      'examples/basic/i18n-smell.config.mjs',
+      path.join(tempDir, 'i18n-smell.config.mjs'),
       '--baseline',
       baseline,
       '--format',
       'json',
+      '--include-ignored',
       '--fail-on',
       'medium',
     ]);
 
     assert.equal(result.status, 1);
     const report = parseIssuesJson(result.stdout);
-    assert.equal(
-      report.issues.some((issue) => issue.id === 'identical:zh:home.title'),
-      false,
-    );
-    assert.ok(report.issues.some((issue) => issue.check === 'hardcoded'));
+    assert.ok(report.issues.some((issue) => issue.check === 'identical' && issue.reason === 'baseline'));
+    assert.ok(report.issues.some((issue) => issue.value === 'New warning' && issue.reason !== 'baseline'));
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
@@ -217,11 +214,8 @@ test('stale baseline issues disappear when baseline is updated', async () => {
     await writeFile(
       baseline,
       JSON.stringify({
-        version: 1,
-        issues: [
-          { id: 'identical:zh:removed.key', key: 'removed.key', targetLocale: 'zh', value: 'Removed' },
-          { id: 'identical:zh:home.title', key: 'home.title', targetLocale: 'zh', value: 'Welcome back' },
-        ],
+        version: 4,
+        issues: [{ id: 'identical:v4:stale', key: 'removed.key', targetLocale: 'zh', value: 'Removed' }],
       }),
     );
 
@@ -237,13 +231,10 @@ test('stale baseline issues disappear when baseline is updated', async () => {
     assert.equal(result.status, 0);
     const parsed = parseIssuesJson(await readFile(baseline, 'utf8'));
     assert.equal(
-      parsed.issues.some((issue) => issue.id === 'identical:zh:removed.key'),
+      parsed.issues.some((issue) => issue.id === 'identical:v4:stale'),
       false,
     );
-    assert.equal(
-      parsed.issues.some((issue) => issue.id === 'identical:zh:home.title'),
-      true,
-    );
+    assert.ok(parsed.issues.some((issue) => issue.id?.startsWith('identical:v4:')));
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
@@ -296,91 +287,27 @@ test('baseline fingerprints survive source position changes', async () => {
   }
 });
 
-test('version 1 hardcoded baseline ids remain compatible', async () => {
+test('legacy baseline versions require regeneration', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-baseline-'));
   const baseline = path.join(tempDir, 'baseline.json');
 
   try {
     await writeBasicProject(tempDir);
-    await writeFile(
-      baseline,
-      JSON.stringify({
-        version: 1,
-        issues: [
-          {
-            id: 'hardcoded:src/components/UserPanel.vue:4:13:Save',
-            value: 'Save',
-          },
-        ],
-      }),
-    );
+    for (const version of [undefined, 1, 2, 3]) {
+      await writeFile(baseline, JSON.stringify({ ...(version === undefined ? {} : { version }), issues: [] }));
+      const result = run([
+        'check',
+        '--config',
+        path.join(tempDir, 'i18n-smell.config.mjs'),
+        '--baseline',
+        baseline,
+        '--fail-on',
+        'none',
+      ]);
 
-    const result = run([
-      'check',
-      '--config',
-      path.join(tempDir, 'i18n-smell.config.mjs'),
-      '--baseline',
-      baseline,
-      '--format',
-      'json',
-      '--include-ignored',
-      '--fail-on',
-      'none',
-    ]);
-
-    assert.equal(result.status, 0, result.stderr);
-    const report = parseIssuesJson(result.stdout);
-    assert.ok(report.issues.some((issue) => issue.value === 'Save' && issue.reason === 'baseline'));
-  } finally {
-    await rm(tempDir, { recursive: true, force: true });
-  }
-});
-
-test('version 2 contextual baseline ids remain compatible', async () => {
-  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-baseline-'));
-  const baseline = path.join(tempDir, 'baseline.json');
-
-  try {
-    await writeBasicProject(tempDir);
-    const initial = run([
-      'check',
-      '--config',
-      path.join(tempDir, 'i18n-smell.config.mjs'),
-      '--format',
-      'json',
-      '--fail-on',
-      'none',
-    ]);
-    const save = parseIssuesJson(initial.stdout).issues.find((issue) => issue.value === 'Save');
-    assert.ok(save);
-    const fingerprint = JSON.stringify({
-      file: save.file,
-      kind: save.kind,
-      nodeType: save.nodeType,
-      parentNodeType: save.parentNodeType,
-      containsInterpolation: save.containsInterpolation || false,
-      value: save.value,
-      range: save.range,
-    });
-    const id = `hardcoded:v2:${createHash('sha256').update(fingerprint).digest('hex').slice(0, 20)}`;
-    await writeFile(baseline, JSON.stringify({ version: 2, issues: [{ id, value: 'Save' }] }));
-
-    const result = run([
-      'check',
-      '--config',
-      path.join(tempDir, 'i18n-smell.config.mjs'),
-      '--baseline',
-      baseline,
-      '--format',
-      'json',
-      '--include-ignored',
-      '--fail-on',
-      'none',
-    ]);
-    assert.equal(result.status, 0, result.stderr);
-    assert.ok(
-      parseIssuesJson(result.stdout).issues.some((issue) => issue.value === 'Save' && issue.reason === 'baseline'),
-    );
+      assert.equal(result.status, 2);
+      assert.match(result.stderr, /must be regenerated with --update-baseline/);
+    }
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
@@ -391,20 +318,15 @@ test('includeIgnored shows baseline issues', async () => {
   const baseline = path.join(tempDir, 'baseline.json');
 
   try {
-    await writeFile(
+    const update = run([
+      'check',
+      '--config',
+      'examples/basic/i18n-smell.config.mjs',
+      '--baseline',
       baseline,
-      JSON.stringify({
-        version: 1,
-        issues: [
-          {
-            id: 'identical:zh:home.title',
-            key: 'home.title',
-            targetLocale: 'zh',
-            value: 'Welcome back',
-          },
-        ],
-      }),
-    );
+      '--update-baseline',
+    ]);
+    assert.equal(update.status, 0, update.stderr);
 
     const result = run([
       'check',
@@ -421,7 +343,7 @@ test('includeIgnored shows baseline issues', async () => {
 
     assert.equal(result.status, 0);
     const report = parseIssuesJson(result.stdout);
-    assert.ok(report.issues.some((issue) => issue.id === 'identical:zh:home.title' && issue.reason === 'baseline'));
+    assert.ok(report.issues.some((issue) => issue.id?.startsWith('identical:v4:') && issue.reason === 'baseline'));
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
