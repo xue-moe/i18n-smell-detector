@@ -3,6 +3,50 @@ import type { DetectorConfig, IssueSuppression, Severity } from '../types.js';
 
 type Classification = { severity: Severity; reason: string; suppression?: IssueSuppression };
 
+const BUILTIN_TECHNICAL_ACRONYMS = new Set([
+  'API',
+  'CLI',
+  'CPU',
+  'CSS',
+  'DNS',
+  'GPU',
+  'HTML',
+  'HTTP',
+  'HTTPS',
+  'ID',
+  'IP',
+  'JSON',
+  'SDK',
+  'SQL',
+  'SSH',
+  'TCP',
+  'TLS',
+  'UI',
+  'URI',
+  'URL',
+  'UUID',
+  'XML',
+]);
+
+const UI_KEY_SEGMENTS = new Set([
+  'action',
+  'actions',
+  'button',
+  'buttons',
+  'cta',
+  'dialog',
+  'label',
+  'menu',
+  'message',
+  'nav',
+  'option',
+  'placeholder',
+  'status',
+  'tab',
+  'title',
+  'tooltip',
+]);
+
 function isBlank(value: string): boolean {
   return value.trim().length === 0;
 }
@@ -12,15 +56,37 @@ function isExternalReference(value: string): boolean {
   return /^(https?:\/\/|tel:)/i.test(text) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text);
 }
 
-function isCodeLike(value: string): boolean {
+function isClearlyTechnical(value: string): boolean {
   const text = value.trim();
   return (
+    /^(?:https?:\/\/|\/)[^\s]+$/i.test(text) ||
     /^#[0-9a-f]{3,8}$/i.test(text) ||
-    /^\/[a-z0-9_./:-]*$/i.test(text) ||
-    /^[A-Z]{2,5}$/.test(text) ||
-    /^[A-Z]{2,5}\s?[0-9A-Z-]*$/.test(text) ||
-    (/^[a-z0-9_.:-]+$/.test(text) && !/\s/.test(text) && !/[A-Z]/.test(text))
+    /^v?\d+(?:\.\d+){1,3}(?:[-+][0-9a-z.-]+)?$/i.test(text) ||
+    /^[A-Za-z][A-Za-z0-9]*(?:[._:][A-Za-z0-9]+)+$/.test(text) ||
+    /^(?=.*(?:\d|[*-]))[A-Z][A-Z0-9*-]+$/.test(text) ||
+    /^[a-z0-9.+-]+\/[a-z0-9.+-]+$/i.test(text)
   );
+}
+
+function keySegments(key: string): string[] {
+  return key
+    .toLowerCase()
+    .split(/[._:[\]-]+/)
+    .filter(Boolean);
+}
+
+function hasUiKeyContext(key: string): boolean {
+  return keySegments(key).some((segment) => UI_KEY_SEGMENTS.has(segment));
+}
+
+function keyMatchesValue(key: string, value: string): boolean {
+  return keySegments(key).at(-1) === value.trim().toLowerCase();
+}
+
+function isCodeLike(key: string, value: string): boolean {
+  const text = value.trim();
+  if (isClearlyTechnical(text) || BUILTIN_TECHNICAL_ACRONYMS.has(text)) return true;
+  return /^[A-Z]{2,}$/.test(text) && !hasUiKeyContext(key) && !keyMatchesValue(key, text);
 }
 
 function isPlaceholderOnly(value: string, patterns: RegExp[]): boolean {
@@ -89,7 +155,8 @@ export function classifyIdentical({
   if (isPlaceholderOnly(value, config.placeholderPatterns || []))
     return { severity: 'ignored', reason: 'placeholder only' };
   if (isExternalReference(value)) return { severity: 'ignored', reason: 'external reference' };
-  if ((config.ignoreCodeLike ?? true) && isCodeLike(value)) return { severity: 'ignored', reason: 'code-like value' };
+  if ((config.ignoreCodeLike ?? true) && isCodeLike(key, value))
+    return { severity: 'ignored', reason: 'code-like value' };
   if (isShortCommonLabel(value)) return { severity: 'low', reason: 'short common label' };
 
   const words = getLatinWords(value);
