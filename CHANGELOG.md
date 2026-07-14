@@ -1,3 +1,17 @@
+## [0.9.1](https://github.com/xue-moe/i18n-smell-detector/compare/v0.9.0...v0.9.1) (2026-07-14)
+
+
+### Bug Fixes
+
+* **hardcoded:** extract dynamic JSX attribute messages ([0ea9a31](https://github.com/xue-moe/i18n-smell-detector/commit/0ea9a3133652de733129d098f66dc7a648d537e8))
+* **hardcoded:** respect Vue attribute allowlist for bindings ([810eafd](https://github.com/xue-moe/i18n-smell-detector/commit/810eafdaba605a9bf7475b48c7c35cf8fa6cb171))
+* **hardcoded:** scan Vue branches containing i18n calls ([3b35e0d](https://github.com/xue-moe/i18n-smell-detector/commit/3b35e0dab3921a2d5d5ba2920dd61d535cee16a0))
+* **identical:** distinguish locale scripts and regions ([ca63558](https://github.com/xue-moe/i18n-smell-detector/commit/ca63558f940f9d21bf476f359397dd7adbcac35c))
+* **identical:** refine code-like value classification ([75941cb](https://github.com/xue-moe/i18n-smell-detector/commit/75941cb212e559388766e26e888170b93f3774d0))
+* **identical:** use language-neutral classification reasons ([1f457cf](https://github.com/xue-moe/i18n-smell-detector/commit/1f457cfc77858f308d724a3bcfe8e56b31025214))
+* **locale:** reject invalid flattened locale data ([2915352](https://github.com/xue-moe/i18n-smell-detector/commit/2915352b6c83e61ffa748c4d0dbd86fe3d241730))
+* **placeholders:** normalize regex patterns in public API ([283d0bf](https://github.com/xue-moe/i18n-smell-detector/commit/283d0bfd06441106e57e26571a8905110c0450e9))
+
 # [0.9.0](https://github.com/xue-moe/i18n-smell-detector/compare/v0.8.0...v0.9.0) (2026-07-13)
 
 
