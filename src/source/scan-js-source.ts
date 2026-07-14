@@ -231,24 +231,15 @@ export function scanJsText(
     }
 
     if (node.type === 'JSXAttribute' && jsxAttributes.has(jsxName(node.name))) {
+      const attributeName = jsxName(node.name);
       const valueNode = node.value as AstNode | null | undefined;
-      const value = staticString(valueNode);
-      if (value === null) return;
 
-      const issue = makeIssue({
-        file,
-        source,
-        fileSource,
-        sourceOffset,
-        lineOffset,
-        node: valueNode,
-        parentNode: node,
-        value,
-        kind: `jsx-attribute:${jsxName(node.name)}`,
-        baseReason: `static ${jsxName(node.name)} attribute`,
-        config,
-      });
-      if (issue) issues.push(issue);
+      const candidateNode =
+        valueNode?.type === 'JSXExpressionContainer' ? (valueNode.expression as AstNode | null | undefined) : valueNode;
+
+      addCandidates(candidateNode, node, `jsx-attribute:${attributeName}`, `static ${attributeName} attribute`);
+
+      return;
     }
   });
 

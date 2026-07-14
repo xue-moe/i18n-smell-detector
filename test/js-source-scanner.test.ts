@@ -183,6 +183,47 @@ test('scanJsText reports an interpolated template as one message candidate', () 
   assert.equal(issues[0].range?.start.offset, source.indexOf('`'));
 });
 
+test('scanJsText extracts dynamic JSX attribute candidates', () => {
+  const source = `
+    <>
+      <Button title={loading ? 'Loading...' : 'Retry'} />
+      <Input title={invalid && 'Enter a valid email'} />
+      <Button title={\`Delete \${fileName}\`} />
+    </>
+  `;
+
+  const issues = scanJsText(source, {
+    file: 'Component.tsx',
+    config: scanConfig,
+  });
+
+  assert.deepEqual(
+    issues.map((issue) => issue.value),
+    ['Loading...', 'Retry', 'Enter a valid email', 'Delete {fileName}'],
+  );
+
+  const interpolated = issues.find((issue) => issue.value === 'Delete {fileName}');
+
+  assert.equal(interpolated?.containsInterpolation, true);
+  assert.equal(interpolated?.interpolations?.[0].expression, 'fileName');
+});
+
+test('scanJsText ignores non-message JSX attribute expressions', () => {
+  const source = `
+    <Button
+      title={translatedTitle}
+      title={t('common.title')}
+    />
+  `;
+
+  const issues = scanJsText(source, {
+    file: 'Component.tsx',
+    config: scanConfig,
+  });
+
+  assert.equal(issues.length, 0);
+});
+
 test('checkHardcodedStrings detects JSX text and static attributes', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'i18n-smell-jsx-'));
 
