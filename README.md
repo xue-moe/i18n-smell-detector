@@ -5,9 +5,51 @@
 [![Socket Badge](https://badge.socket.dev/npm/package/i18n-smell-detector)](https://badge.socket.dev/npm/package/i18n-smell-detector)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-Find localization issues that key coverage checks miss.
+## Catch localization bugs your i18n coverage reports can't see.
 
-`i18n-smell-detector` checks locale files for copied base-locale values and placeholder mismatches. It can also scan Vue, JavaScript, TypeScript, JSX, and TSX source for hardcoded user-visible strings.
+`i18n-smell-detector` is an i18n linter that catches localization mistakes ordinary key-coverage checks miss:
+
+- copied base-locale values that were never translated;
+- missing, extra, or repeated placeholders;
+- hardcoded user-visible text in Vue, JavaScript, TypeScript, JSX, and TSX.
+
+<p align="center">
+  <img src="./assets/i18n-smell-demo.gif"
+       alt="i18n-smell-detector finding copied translations, placeholder mismatches, and hardcoded UI text"
+       width="900">
+</p>
+
+```json
+// locales/en.json
+{
+  "checkout.pay": "Pay now",
+  "cart.items": "{{count}} items"
+}
+```
+
+```json
+// locales/ja.json
+{
+  "checkout.pay": "Pay now",
+  "cart.items": "商品"
+}
+```
+
+```Vue
+<button>Delete account</button>
+```
+
+The project has every translation key, but it still ships three localization problems.
+
+`i18n-smell-detector` reports them before your users do.
+
+## Try it
+
+```bash
+npm install -D i18n-smell-detector
+npx i18n-smell-detector init
+npx i18n-smell-detector check --fail-on none
+```
 
 The classifier is deterministic and conservative. Start with `--fail-on none`, review the report, then tune allowlists before enforcing CI.
 
@@ -20,17 +62,10 @@ The classifier is deterministic and conservative. Start with `--fail-on none`, r
 - Support baselines for gradual adoption.
 - Publish TypeScript types and a small public API for integrations.
 
-## Install
+## Configuration
 
-```bash
-npm install -D i18n-smell-detector
-```
-
-## Quick Start
-
-```bash
+``` bash
 npx i18n-smell-detector init
-npx i18n-smell-detector check --config i18n-smell.config.mjs --fail-on none
 ```
 
 `init` creates `i18n-smell.config.mjs`. When it finds locale JSON files in `src/locales`, `src/i18n`, `locales`, or `i18n`, it writes them into the config automatically.
@@ -53,6 +88,7 @@ export default {
 Locale keys that contain `-`, such as `'zh-Hans'`, must be quoted.
 
 With `ignoreSameLanguageFamily` enabled, locale tags are compared by language, inferred script, and explicitly declared region. Different scripts are checked normally, two different explicit regions are reported at low severity, and otherwise matching language and script are ignored. The last case includes comparisons where one or both locale tags do not explicitly declare a region.
+
 
 ## Commands
 
@@ -156,9 +192,8 @@ import type { DetectorConfigInput, DetectorIssue, CheckResult } from 'i18n-smell
 
 ## Documentation
 
-Full documentation lives in the GitHub Wiki:
+See the GitHub [Wiki](https://github.com/xue-moe/i18n-smell-detector/wiki) for:
 
-- [Home](https://github.com/xue-moe/i18n-smell-detector/wiki)
 - [Getting started](https://github.com/xue-moe/i18n-smell-detector/wiki/Getting-Started)
 - [Commands](https://github.com/xue-moe/i18n-smell-detector/wiki/Commands)
 - [Configuration](https://github.com/xue-moe/i18n-smell-detector/wiki/Configuration)
