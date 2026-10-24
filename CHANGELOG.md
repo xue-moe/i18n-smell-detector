@@ -1,3 +1,10 @@
+## [0.9.4](https://github.com/xue-moe/i18n-smell-detector/compare/v0.9.3...v0.9.4) (2026-10-24)
+
+
+### Bug Fixes
+
+* **deps:** isolate vulnerable release tooling ([c756c90](https://github.com/xue-moe/i18n-smell-detector/commit/c756c90e6467671f33c186a6672f796c4ff66ac8))
+
 ## [0.9.3](https://github.com/xue-moe/i18n-smell-detector/compare/v0.9.2...v0.9.3) (2026-10-24)
 
 
