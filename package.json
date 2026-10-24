@@ -33,15 +33,14 @@
     "check:identical": "npm run build --silent && node ./bin/i18n-smell-detector.js check-identical --config ./examples/vue-vite/i18n-smell.config.mjs --fail-on none",
     "check:hardcoded": "npm run build --silent && node ./bin/i18n-smell-detector.js check-hardcoded --config ./examples/vue-vite/i18n-smell.config.mjs --fail-on none",
     "example:basic": "npm run build --silent && node ./bin/i18n-smell-detector.js check --config ./examples/basic/i18n-smell.config.mjs --fail-on none",
-    "audit": "npm audit --omit=dev --audit-level=moderate",
-    "audit:all": "npm audit --audit-level=moderate",
+    "audit": "npm audit --audit-level=moderate",
     "benchmark": "npm run build --silent && tsx ./scripts/benchmark.ts",
     "check:package": "tsx ./scripts/check-package.ts",
     "format:check": "prettier --check \"**/*.{ts,js,json,md,yml}\"",
     "build:types": "tsc -p tsconfig.types.json",
     "prepack": "npm run build",
-    "release": "semantic-release",
-    "release:dry-run": "semantic-release --dry-run",
+    "release": "npm exec --yes --package=semantic-release@25.0.9 --package=@semantic-release/changelog@6.0.3 --package=@semantic-release/git@10.0.1 -- semantic-release",
+    "release:dry-run": "npm run release -- --dry-run",
     "typecheck": "npm run build --silent && tsc -p tsconfig.check.json",
     "test": "npm run build --silent && tsx --test test/*.test.ts"
   },
@@ -64,13 +63,10 @@
     "fast-glob": "^3.3.3"
   },
   "devDependencies": {
-    "@semantic-release/changelog": "^6.0.3",
-    "@semantic-release/git": "^10.0.1",
     "@types/eslint": "^9.6.1",
     "@types/node": "^18.19.130",
     "@types/vscode": "^1.125.0",
     "prettier": "^3.9.5",
-    "semantic-release": "^25.0.9",
     "tsx": "^4.23.0",
     "typescript": "^7.0.2"
   }
