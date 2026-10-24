@@ -4,7 +4,7 @@
   "description": "Find copied locale values, placeholder mismatches, and hardcoded user-visible strings.",
   "type": "module",
   "bin": {
-    "i18n-smell-detector": "./bin/i18n-smell-detector.js"
+    "i18n-smell-detector": "bin/i18n-smell-detector.js"
   },
   "types": "./dist/index.d.ts",
   "exports": {

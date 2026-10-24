@@ -17,8 +17,8 @@ if (!Array.isArray(pkg.files) || JSON.stringify(pkg.files) !== JSON.stringify(ex
   throw new Error(`package.json files must be ${JSON.stringify(expectedFiles)}`);
 }
 
-if (!pkg.bin || pkg.bin['i18n-smell-detector'] !== './bin/i18n-smell-detector.js') {
-  throw new Error('package.json bin must point to ./bin/i18n-smell-detector.js');
+if (!pkg.bin || pkg.bin['i18n-smell-detector'] !== 'bin/i18n-smell-detector.js') {
+  throw new Error('package.json bin must point to bin/i18n-smell-detector.js');
 }
 
 if (pkg.types !== './dist/index.d.ts') {
