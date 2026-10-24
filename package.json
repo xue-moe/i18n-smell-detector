@@ -33,7 +33,8 @@
     "check:identical": "npm run build --silent && node ./bin/i18n-smell-detector.js check-identical --config ./examples/vue-vite/i18n-smell.config.mjs --fail-on none",
     "check:hardcoded": "npm run build --silent && node ./bin/i18n-smell-detector.js check-hardcoded --config ./examples/vue-vite/i18n-smell.config.mjs --fail-on none",
     "example:basic": "npm run build --silent && node ./bin/i18n-smell-detector.js check --config ./examples/basic/i18n-smell.config.mjs --fail-on none",
-    "audit": "npm audit --audit-level=moderate",
+    "audit": "npm audit --omit=dev --audit-level=moderate",
+    "audit:all": "npm audit --audit-level=moderate",
     "benchmark": "npm run build --silent && tsx ./scripts/benchmark.ts",
     "check:package": "tsx ./scripts/check-package.ts",
     "format:check": "prettier --check \"**/*.{ts,js,json,md,yml}\"",
@@ -57,8 +58,8 @@
   },
   "dependencies": {
     "@babel/parser": "^7.29.7",
-    "@vue/compiler-dom": "^3.5.39",
-    "@vue/compiler-sfc": "^3.5.39",
+    "@vue/compiler-dom": "^3.5.44",
+    "@vue/compiler-sfc": "^3.5.44",
     "commander": "^12.1.0",
     "fast-glob": "^3.3.3"
   },
@@ -69,7 +70,7 @@
     "@types/node": "^18.19.130",
     "@types/vscode": "^1.125.0",
     "prettier": "^3.9.5",
-    "semantic-release": "^25.0.5",
+    "semantic-release": "^25.0.9",
     "tsx": "^4.23.0",
     "typescript": "^7.0.2"
   }
