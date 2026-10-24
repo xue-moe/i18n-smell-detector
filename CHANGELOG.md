@@ -1,3 +1,10 @@
+## [0.9.2](https://github.com/xue-moe/i18n-smell-detector/compare/v0.9.1...v0.9.2) (2026-10-24)
+
+
+### Bug Fixes
+
+* **deps:** update vulnerable dependencies ([7a0e678](https://github.com/xue-moe/i18n-smell-detector/commit/7a0e67862941846231c64da7e14e8bef5564683e))
+
 ## [0.9.1](https://github.com/xue-moe/i18n-smell-detector/compare/v0.9.0...v0.9.1) (2026-07-14)
 
 
