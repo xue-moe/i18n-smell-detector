@@ -1,3 +1,10 @@
+## [0.9.3](https://github.com/xue-moe/i18n-smell-detector/compare/v0.9.2...v0.9.3) (2026-10-24)
+
+
+### Bug Fixes
+
+* **package:** preserve CLI bin metadata ([bba17df](https://github.com/xue-moe/i18n-smell-detector/commit/bba17dfcf6bfddda37a7c3528379cebf0d29eb1e))
+
 ## [0.9.2](https://github.com/xue-moe/i18n-smell-detector/compare/v0.9.1...v0.9.2) (2026-10-24)
 
 
